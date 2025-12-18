@@ -10,4 +10,8 @@ pub trait Wizard: Sized {
         let _ = message;
         Self::wizard()
     }
+
+    fn wizard_with_defaults(self) -> Self {
+        self
+    }
 }
