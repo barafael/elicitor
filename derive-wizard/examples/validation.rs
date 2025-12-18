@@ -4,20 +4,19 @@ use derive_wizard::Wizard;
 #[allow(dead_code)]
 struct ServerConfig {
     #[prompt("Enter server address (host:port):")]
+    #[validate_on_key("validate_address")]
     #[validate_on_submit("validate_address")]
     address: String,
 
     #[prompt("Enter admin username:")]
+    #[validate_on_key("validate_username")]
     #[validate_on_submit("validate_username")]
     username: String,
 
     #[prompt("Enter admin email:")]
+    #[validate_on_key("validate_email")]
     #[validate_on_submit("validate_email")]
     email: String,
-
-    #[prompt("Enter port number (1024-65535):")]
-    #[validate_on_submit("validate_port")]
-    port: u16,
 }
 
 /// Validates that the address is in host:port format
@@ -58,15 +57,6 @@ fn validate_email(input: &str, _answers: &derive_wizard::Answers) -> Result<(), 
         return Err("Email domain must contain a dot (e.g., example.com)".to_string());
     }
     Ok(())
-}
-
-/// Validates port number is in valid range (1024-65535)
-fn validate_port(input: i64, _answers: &derive_wizard::Answers) -> Result<(), String> {
-    match u16::try_from(input) {
-        Ok(port) if port >= 1024 => Ok(()),
-        Ok(port) => Err(format!("Port must be 1024 or higher (is {port})")),
-        Err(e) => Err(format!("Port must be a valid number ({e})")),
-    }
 }
 
 fn main() {

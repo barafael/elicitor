@@ -36,6 +36,7 @@ pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct)
                 attrs.mask,
                 attrs.editor,
                 attrs.validate_on_submit,
+                attrs.validate_on_key,
             )
             .expect("Field attributes");
             (field_gen.question, field_gen.prompt, ident)
@@ -71,6 +72,7 @@ fn generate_field_code(
     has_mask: bool,
     has_editor: bool,
     validate_on_submit: Option<TokenStream>,
+    validate_on_key: Option<TokenStream>,
 ) -> Result<FieldCode, crate::WizardError> {
     match prompt_attr {
         PromptAttr::None => Err(crate::WizardError::MissingPromptAttributes),
@@ -88,11 +90,16 @@ fn generate_field_code(
                     quote! { .validate(#validator) }
                 });
 
+                let validation_on_key = validate_on_key.as_ref().map(|validator| {
+                    quote! { .validate_on_key(|input, answers| #validator(input, answers).is_ok()) }
+                });
+
                 Ok(FieldCode {
                     question: Some(quote! {
                         let #ident = Question::#question_type(#field_name)
                             .message(#prompt_text)
                             #validation
+                            #validation_on_key
                             .build();
                     }),
                     prompt: quote! { let #ident = prompt_one(#ident).unwrap() #into; },

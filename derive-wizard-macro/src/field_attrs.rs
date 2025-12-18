@@ -7,6 +7,7 @@ pub struct FieldAttrs {
     pub mask: bool,
     pub editor: bool,
     pub validate_on_submit: Option<proc_macro2::TokenStream>,
+    pub validate_on_key: Option<proc_macro2::TokenStream>,
 }
 
 impl FieldAttrs {
@@ -15,6 +16,7 @@ impl FieldAttrs {
         let mut mask = false;
         let mut editor = false;
         let mut validate_on_submit = None;
+        let mut validate_on_key = None;
 
         for attr in &field.attrs {
             if attr.path().is_ident("prompt") {
@@ -41,6 +43,18 @@ impl FieldAttrs {
                     }
                     _ => return Err((WizardError::InvalidValidateAttribute, attr.span())),
                 };
+            } else if attr.path().is_ident("validate_on_key") {
+                validate_on_key = match &attr.meta {
+                    Meta::List(list) => {
+                        // Parse the string literal and extract the function name
+                        let lit: syn::LitStr = syn::parse2(list.tokens.clone())
+                            .map_err(|_| (WizardError::InvalidValidateAttribute, attr.span()))?;
+                        let func_name = lit.value();
+                        let ident = syn::Ident::new(&func_name, lit.span());
+                        Some(quote::quote! { #ident })
+                    }
+                    _ => return Err((WizardError::InvalidValidateAttribute, attr.span())),
+                };
             }
         }
 
@@ -53,6 +67,7 @@ impl FieldAttrs {
             mask,
             editor,
             validate_on_submit,
+            validate_on_key,
         })
     }
 }
