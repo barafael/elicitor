@@ -14,5 +14,5 @@ struct Config {
 
 fn main() {
     let config = Config::wizard();
-    println!("Config: {config:#?}",);
+    println!("Config: {config:#?}");
 }

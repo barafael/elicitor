@@ -1,3 +1,5 @@
+#![doc = include_str!("../../README.md")]
+
 pub use derive_wizard_macro::*;
 pub use requestty::Question;
 pub use requestty::prompt_one;

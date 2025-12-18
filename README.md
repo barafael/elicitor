@@ -2,62 +2,61 @@
 
 A Rust procedural macro that automatically generates interactive CLI wizards from struct definitions using [requestty](https://crates.io/crates/requestty).
 
-## Features
-
-### Supported Question Types
-
-The `#[derive(Wizard)]` macro supports all 11 requestty question types:
-
-| Rust Type | Default Question Type | Override Options | Returns |
-|-----------|----------------------|------------------|---------|
-| `String` | `input` | `#[mask]` for password, `#[editor]` for text editor | `String` |
-| `bool` | `confirm` | - | `bool` |
-| `i8`, `i16`, `i32`, `i64`, `isize` | `int` | - | `i64` (cast to type) |
-| `u8`, `u16`, `u32`, `u64`, `usize` | `int` | - | `i64` (cast to type) |
-| `f32`, `f64` | `float` | - | `f64` (cast to type) |
-| `ListItem` | `select` | - | `ListItem` |
-| `ExpandItem` | `expand` | - | `ExpandItem` |
-| `Vec<ListItem>` | `multi_select` | - | `Vec<ListItem>` |
-
-### Question Type Details
-
-1. **input** - Basic text input prompt (default for String)
-2. **password** - Hidden text input (use `#[mask]` on String fields)
-3. **editor** - Opens text editor for longer input (use `#[editor]` on String fields)
-4. **confirm** - Yes/No confirmation prompt (default for bool)
-5. **int** - Integer input (default for integer types)
-6. **float** - Floating point input (default for float types)
-7. **select** - Single selection from a list (default for ListItem)
-8. **expand** - Single selection with keyboard shortcuts (default for ExpandItem)
-9. **multi_select** - Multiple selection from a list (default for Vec<ListItem>)
-
-Note: The following question types are available in requestty but not currently exposed through attributes:
-
-- **raw_select** - Single selection with index-based input
-- **order_select** - Reorder items in a list
-
 ## Usage
 
 ### Basic Example
 
-```rust
+```rust,no_run
 use derive_wizard::Wizard;
 
 #[derive(Debug, Wizard)]
-struct Config {
-    #[prompt("Enter the server address:")]
-    server: String,  // Uses 'input' question type by default
+struct ShowCase {
+    // String types - defaults to 'input'
+    #[prompt("Enter your name:")]
+    name: String,
 
-    #[prompt("Enter the port number:")]
-    port: u16,  // Uses 'int' question type by default
+    // Override with password question type
+    #[prompt("Enter your password:")]
+    #[mask]
+    password: String,
 
-    #[prompt("Enable logging?")]
-    logging: bool,  // Uses 'confirm' question type by default
+    // Long text with editor
+    #[prompt("Enter a bio:")]
+    #[editor]
+    bio: String,
+
+    // Bool type - defaults to 'confirm'
+    #[prompt("Do you agree to the terms?")]
+    agree: bool,
+
+    // Integer types - defaults to 'int'
+    #[prompt("Enter your age (i32):")]
+    age: i32,
+
+    // Float types - defaults to 'float'
+    #[prompt("Enter your height in meters (f64):")]
+    height: f64,
+
+    #[prompt("Enter a decimal number (f32):")]
+    decimal: f32,
+    
+    #[prompt("Enter your gender")]
+    gender: Gender,
+}
+
+#[derive(Debug, Wizard)]
+enum Gender {
+    Male,
+    Female,
+    Other(
+        #[prompt("Please specify:")]
+        String
+    ),
 }
 
 fn main() {
-    let config = Config::wizard();
-    println!("Config: {config:#?}");
+    let magic = ShowCase::wizard();
+    println!("Config: {magic:#?}");
 }
 ```
 
@@ -97,45 +96,6 @@ struct Article {
 }
 ```
 
-### All Supported Types
-
-```rust
-use derive_wizard::Wizard;
-
-#[derive(Debug, Wizard)]
-struct ComprehensiveExample {
-    // String-based prompts
-    #[prompt("Basic input:")]
-    basic_input: String,
-
-    #[prompt("Password:")]
-    #[mask]
-    password: String,
-
-    #[prompt("Long description:")]
-    #[editor]
-    description: String,
-
-    // Boolean
-    #[prompt("Agree to terms?")]
-    agree: bool,
-
-    // Integers
-    #[prompt("Your age (i32):")]
-    age: i32,
-
-    #[prompt("Count (u64):")]
-    count: u64,
-
-    // Floats
-    #[prompt("Height in meters:")]
-    height: f64,
-
-    #[prompt("Weight in kg:")]
-    weight: f32,
-}
-```
-
 ## Attributes
 
 - `#[prompt("message")]` - **Required**. The message to display to the user
@@ -144,26 +104,37 @@ struct ComprehensiveExample {
 
 **Note**: `#[mask]` and `#[editor]` are mutually exclusive and cannot be used on the same field.
 
-### Examples
+## Supported Question Types
 
-```rust
-// Password field
-#[prompt("Password:")]
-#[mask]
-password: String,
+The `#[derive(Wizard)]` macro supports all 11 requestty question types:
 
-// Long text with editor
-#[prompt("Description:")]
-#[editor]
-description: String,
-```
+| Rust Type                          | Default Question Type | Override Options                                    | Returns              |
+|------------------------------------|-----------------------|-----------------------------------------------------|----------------------|
+| `String`                           | `input`               | `#[mask]` for password, `#[editor]` for text editor | `String`             |
+| `bool`                             | `confirm`             | -                                                   | `bool`               |
+| `i8`, `i16`, `i32`, `i64`, `isize` | `int`                 | -                                                   | `i64` (cast to type) |
+| `u8`, `u16`, `u32`, `u64`, `usize` | `int`                 | -                                                   | `i64` (cast to type) |
+| `f32`, `f64`                       | `float`               | -                                                   | `f64` (cast to type) |
+| `ListItem`                         | `select`              | -                                                   | `ListItem`           |
+| `ExpandItem`                       | `expand`              | -                                                   | `ExpandItem`         |
+| `Vec<ListItem>`                    | `multi_select`        | -                                                   | `Vec<ListItem>`      |
 
-## Requirements
+## Question Type Details
 
-```toml
-[dependencies]
-derive-wizard = "0.1.0"
-```
+1. **input** - Basic text input prompt (default for String)
+2. **password** - Hidden text input (use `#[mask]` on String fields)
+3. **editor** - Opens text editor for longer input (use `#[editor]` on String fields)
+4. **confirm** - Yes/No confirmation prompt (default for bool)
+5. **int** - Integer input (default for integer types)
+6. **float** - Floating point input (default for float types)
+7. **select** - Single selection from a list (default for ListItem)
+8. **expand** - Single selection with keyboard shortcuts (default for ExpandItem)
+9. **multi_select** - Multiple selection from a list (default for `Vec<ListItem>`)
+
+Note: The following question types are available in requestty but not currently exposed through attributes:
+
+- **raw_select** - Single selection with index-based input
+- **order_select** - Reorder items in a list
 
 ## License
 
