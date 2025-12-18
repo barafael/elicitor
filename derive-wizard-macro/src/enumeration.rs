@@ -1,5 +1,4 @@
-use crate::{PromptAttr, WizardError, field_attrs, infer, is_primitive, is_string};
-
+use crate::{PromptAttr, WizardError, field_attrs, infer, is_promptable_type};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned;
@@ -11,53 +10,10 @@ pub fn implement_enum_wizard(name: &syn::Ident, data_enum: &syn::DataEnum) -> To
         .map(|v| v.ident.to_string())
         .collect();
 
-    let match_arms: Result<Vec<_>, (WizardError, proc_macro2::Span)> = data_enum
+    let match_arms: Result<Vec<_>, _> = data_enum
         .variants
         .iter()
-        .map(|variant| {
-            let variant_ident = &variant.ident;
-            let variant_name = variant_ident.to_string();
-
-            match &variant.fields {
-                syn::Fields::Named(fields) => {
-                    let field_data: Result<Vec<_>, _> = fields
-                        .named
-                        .iter()
-                        .enumerate()
-                        .map(|(i, f)| process_enum_field(f, i, &variant_name))
-                        .collect();
-
-                    let field_data = field_data?;
-                    let (idents, code): (Vec<_>, Vec<_>) = field_data.into_iter().unzip();
-
-                    Ok(quote! {
-                        #variant_name => {
-                            #(#code)*
-                            #name::#variant_ident { #(#idents),* }
-                        }
-                    })
-                }
-                syn::Fields::Unnamed(fields) => {
-                    let field_data: Result<Vec<_>, _> = fields
-                        .unnamed
-                        .iter()
-                        .enumerate()
-                        .map(|(i, f)| process_enum_field(f, i, &variant_name))
-                        .collect();
-
-                    let field_data = field_data?;
-                    let (idents, code): (Vec<_>, Vec<_>) = field_data.into_iter().unzip();
-
-                    Ok(quote! {
-                        #variant_name => {
-                            #(#code)*
-                            #name::#variant_ident(#(#idents),*)
-                        }
-                    })
-                }
-                syn::Fields::Unit => Ok(quote! { #variant_name => #name::#variant_ident }),
-            }
-        })
+        .map(|variant| process_variant(name, variant))
         .collect();
 
     let match_arms = match match_arms {
@@ -93,6 +49,52 @@ pub fn implement_enum_wizard(name: &syn::Ident, data_enum: &syn::DataEnum) -> To
     }
 }
 
+fn process_variant(
+    enum_name: &syn::Ident,
+    variant: &syn::Variant,
+) -> Result<TokenStream, (WizardError, proc_macro2::Span)> {
+    let variant_ident = &variant.ident;
+    let variant_name = variant_ident.to_string();
+
+    match &variant.fields {
+        syn::Fields::Named(fields) => {
+            let (idents, code): (Vec<_>, Vec<_>) = fields
+                .named
+                .iter()
+                .enumerate()
+                .map(|(i, f)| process_enum_field(f, i, &variant_name))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .unzip();
+
+            Ok(quote! {
+                #variant_name => {
+                    #(#code)*
+                    #enum_name::#variant_ident { #(#idents),* }
+                }
+            })
+        }
+        syn::Fields::Unnamed(fields) => {
+            let (idents, code): (Vec<_>, Vec<_>) = fields
+                .unnamed
+                .iter()
+                .enumerate()
+                .map(|(i, f)| process_enum_field(f, i, &variant_name))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .unzip();
+
+            Ok(quote! {
+                #variant_name => {
+                    #(#code)*
+                    #enum_name::#variant_ident(#(#idents),*)
+                }
+            })
+        }
+        syn::Fields::Unit => Ok(quote! { #variant_name => #enum_name::#variant_ident }),
+    }
+}
+
 fn process_enum_field(
     field: &syn::Field,
     index: usize,
@@ -101,50 +103,31 @@ fn process_enum_field(
     let field_ident = field
         .ident
         .clone()
-        .unwrap_or_else(|| syn::Ident::new(&format!("field_{}", index), field.span()));
+        .unwrap_or_else(|| syn::Ident::new(&format!("field_{index}"), field.span()));
 
     let attrs = field_attrs::FieldAttrs::parse(field)?;
-    let ty = &field.ty;
 
-    match attrs.prompt {
-        PromptAttr::None => Err((WizardError::MissingPrompt, field.span())),
-        PromptAttr::Wizard => {
-            // #[prompt] without message - nested wizard
-            Ok((
-                field_ident.clone(),
-                quote! {
-                    let #field_ident = <#ty>::wizard();
-                },
-            ))
-        }
+    let code = match attrs.prompt {
+        PromptAttr::None => return Err((WizardError::MissingPrompt, field.span())),
+        PromptAttr::Wizard => quote! { let #field_ident = <#field.ty>::wizard(); },
         PromptAttr::WizardWithMessage(prompt_text) => {
-            let field_name = field
-                .ident
-                .as_ref()
-                .map(|id| id.to_string())
-                .unwrap_or_else(|| format!("{} field {}", variant_name, index));
+            let field_name = field.ident.as_ref().map_or_else(
+                || format!("{variant_name} field {index}"),
+                syn::Ident::to_string,
+            );
 
-            if is_primitive(ty) || is_string(ty) {
-                // Regular promptable field
-                let question_type = infer::infer_question_type(ty, attrs.mask, attrs.editor);
-                let into = infer::infer_into(ty);
-
-                Ok((
-                    field_ident.clone(),
-                    quote! {
-                        let #field_ident = Question::#question_type(#field_name).message(#prompt_text).build();
-                        let #field_ident = prompt_one(#field_ident).unwrap() #into;
-                    },
-                ))
+            if is_promptable_type(&field.ty) {
+                let question_type = infer::infer_question_type(&field.ty, attrs.mask, attrs.editor);
+                let into = infer::infer_target_type(&field.ty).map_err(|e| (e, field.span()))?;
+                quote! {
+                    let #field_ident = Question::#question_type(#field_name).message(#prompt_text).build();
+                    let #field_ident = prompt_one(#field_ident).unwrap() #into;
+                }
             } else {
-                // Custom type with message - call wizard_with_message
-                Ok((
-                    field_ident.clone(),
-                    quote! {
-                        let #field_ident = <#ty>::wizard_with_message(#prompt_text);
-                    },
-                ))
+                quote! { let #field_ident = <#field.ty>::wizard_with_message(#prompt_text); }
             }
         }
-    }
+    };
+
+    Ok((field_ident, code))
 }

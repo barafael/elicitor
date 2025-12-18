@@ -23,8 +23,8 @@ pub fn infer_question_type(ty: &syn::Type, has_mask: bool, has_editor: bool) -> 
     match type_str.as_str() {
         "PathBuf" | "String" => quote! { input },
         "bool" => quote! { confirm },
-        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128"
-        | "usize" => quote! { int },
+        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! { int },
+        "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => quote! { int },
         "f32" | "f64" => quote! { float },
         "ListItem" => quote! { select },
         "ExpandItem" => quote! { expand },
@@ -33,19 +33,19 @@ pub fn infer_question_type(ty: &syn::Type, has_mask: bool, has_editor: bool) -> 
     }
 }
 
-pub fn infer_into(ty: &syn::Type) -> TokenStream {
-    let type_str = match ty {
-        syn::Type::Path(tp) => tp
-            .path
-            .segments
-            .iter()
-            .map(|s| s.ident.to_string())
-            .collect::<Vec<_>>()
-            .join("::"),
-        _ => return quote! {},
+pub fn infer_target_type(ty: &syn::Type) -> Result<TokenStream, crate::WizardError> {
+    let syn::Type::Path(tp) = ty else {
+        return Err(crate::WizardError::UnsupportedTypeForPrompting);
     };
+    let type_str = tp
+        .path
+        .segments
+        .iter()
+        .map(|s| s.ident.to_string())
+        .collect::<Vec<_>>()
+        .join("::");
 
-    match type_str.as_str() {
+    let tokens = match type_str.as_str() {
         "PathBuf" => quote! { .try_into_string().map(PathBuf::from).unwrap() },
         "String" => quote! { .try_into_string().unwrap() },
         "bool" => quote! { .try_into_bool().unwrap() },
@@ -64,6 +64,7 @@ pub fn infer_into(ty: &syn::Type) -> TokenStream {
             let id = syn::Ident::new(ty, proc_macro2::Span::call_site());
             quote! { .try_into_float().unwrap() as #id }
         }
-        _ => quote! {},
-    }
+        _ => return Err(crate::WizardError::UnsupportedTypeForPrompting),
+    };
+    Ok(tokens)
 }

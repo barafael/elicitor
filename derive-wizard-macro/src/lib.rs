@@ -21,13 +21,12 @@ pub fn wizard_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
     let name = &input.ident;
 
-    match input.data {
-        syn::Data::Struct(ref data_struct) => structure::implement_struct_wizard(name, data_struct),
-        syn::Data::Enum(ref data_enum) => implement_enum_wizard(name, data_enum),
-        _ => WizardError::UnsupportedDataType.to_compile_error(name.span()),
+    match &input.data {
+        syn::Data::Struct(data_struct) => structure::implement_struct_wizard(name, data_struct),
+        syn::Data::Enum(data_enum) => implement_enum_wizard(name, data_enum),
+        syn::Data::Union(_) => WizardError::UnionsNotSupported.to_compile_error(name.span()),
     }
 }
-
 
 enum PromptAttr {
     None,
@@ -35,19 +34,13 @@ enum PromptAttr {
     WizardWithMessage(TokenStream),
 }
 
-fn is_primitive(ty: &syn::Type) -> bool {
-    const PRIMITIVES: &[&str] = &[
-        "bool", "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128",
-        "isize", "f32", "f64", "char", "PathBuf",
+fn is_promptable_type(ty: &syn::Type) -> bool {
+    const PROMPTABLE: &[&str] = &[
+        "String", "bool", "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64",
+        "i128", "isize", "f32", "f64", "char", "PathBuf",
     ];
 
-    matches!(ty, syn::Type::Path(type_path) 
-        if type_path.path.segments.last()
-            .is_some_and(|s| PRIMITIVES.contains(&s.ident.to_string().as_str())))
-}
-
-fn is_string(ty: &syn::Type) -> bool {
-    matches!(ty, syn::Type::Path(type_path) 
-        if type_path.path.segments.last()
-            .is_some_and(|s| s.ident == "String"))
+    matches!(ty, syn::Type::Path(tp)
+        if tp.path.segments.last()
+            .is_some_and(|s| PROMPTABLE.contains(&s.ident.to_string().as_str())))
 }

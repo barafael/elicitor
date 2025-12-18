@@ -1,6 +1,6 @@
 use syn::{Meta, spanned::Spanned};
 
-use crate::{PromptAttr, WizardError};
+use crate::{PromptAttr, error::WizardError};
 
 pub struct FieldAttrs {
     pub prompt: PromptAttr,
@@ -19,7 +19,9 @@ impl FieldAttrs {
                 prompt = match &attr.meta {
                     Meta::Path(_) => PromptAttr::Wizard,
                     Meta::List(list) => PromptAttr::WizardWithMessage(list.tokens.clone()),
-                    _ => return Err((WizardError::InvalidPromptAttribute, attr.span())),
+                    Meta::NameValue(_) => {
+                        return Err((WizardError::InvalidPromptAttribute, attr.span()));
+                    }
                 };
             } else if attr.path().is_ident("mask") {
                 mask = true;
