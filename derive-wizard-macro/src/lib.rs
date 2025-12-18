@@ -71,13 +71,13 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
 
     let questions = identifiers
         .iter()
-        .map(|(ident, q, t)| quote::quote! {let #ident = #q;})
+        .map(|(ident, q, _)| quote::quote! {let #ident = #q;})
         .collect::<TokenStream>();
 
     let prompts = identifiers
         .iter()
-        .map(|(ident, tokens, t)| {
-            let into = infer_into(&t);
+        .map(|(ident, _, t)| {
+            let into = infer_into(t);
             quote::quote! {
                 let #ident = prompt_one(#ident).unwrap()
                     #into;
@@ -87,7 +87,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
 
     let target = identifiers
         .iter()
-        .map(|(ident, tokens, t)| {
+        .map(|(ident, _, _)| {
             quote::quote! {
                 #ident,
             }
@@ -113,7 +113,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
         }
     };
 
-    code.into()
+    code
 }
 
 fn infer_into(typ: &syn::Type) -> TokenStream {

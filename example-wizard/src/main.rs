@@ -1,6 +1,7 @@
 use derive_wizard::Wizard;
 
 #[derive(Debug, Wizard)]
+#[allow(unused)]
 struct Config {
     #[prompt("Enter the server address:")]
     // #[validate_on_key("is_valid_address")]
