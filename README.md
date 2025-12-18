@@ -2,11 +2,9 @@
 
 A Rust procedural macro that automatically generates interactive CLI wizards from struct definitions using [requestty](https://crates.io/crates/requestty).
 
-## Usage
+## Showcase
 
-### Basic Example
-
-```rust,no_run
+```rust
 use derive_wizard::Wizard;
 
 #[derive(Debug, Wizard)]
@@ -54,10 +52,10 @@ enum Gender {
     ),
 }
 
-fn main() {
-    let magic = ShowCase::wizard();
-    println!("Config: {magic:#?}");
-}
+// fn main() {
+//    let magic = ShowCase::wizard();
+//    println!("Config: {magic:#?}");
+// }
 ```
 
 ### Password Fields with `#[mask]`

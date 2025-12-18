@@ -1,8 +1,13 @@
 use derive_wizard::Wizard;
 
+fn main() {
+    let magic = ShowCase::wizard();
+    println!("Config: {magic:#?}");
+}
+
 #[derive(Debug, Wizard)]
 #[allow(unused)]
-struct ComprehensiveConfig {
+struct ShowCase {
     // String types - defaults to 'input'
     #[prompt("Enter your name:")]
     name: String,
@@ -23,16 +28,7 @@ struct ComprehensiveConfig {
 
     // Integer types - defaults to 'int'
     #[prompt("Enter your age (i32):")]
-    age_i32: i32,
-
-    #[prompt("Enter your age (i64):")]
-    age_i64: i64,
-
-    #[prompt("Enter a small number (u8):")]
-    small_num: u8,
-
-    #[prompt("Enter a medium number (u16):")]
-    medium_num: u16,
+    age: i32,
 
     // Float types - defaults to 'float'
     #[prompt("Enter your height in meters (f64):")]
@@ -40,9 +36,15 @@ struct ComprehensiveConfig {
 
     #[prompt("Enter a decimal number (f32):")]
     decimal: f32,
+
+    #[prompt("Enter your gender")]
+    gender: Gender,
 }
 
-fn main() {
-    let config = ComprehensiveConfig::wizard();
-    println!("Config: {config:#?}");
+#[derive(Debug, Wizard)]
+#[allow(unused)]
+enum Gender {
+    Male,
+    Female,
+    Other(#[prompt("Please specify:")] String),
 }
