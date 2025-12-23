@@ -23,11 +23,11 @@ pub fn implement_enum_wizard(name: &syn::Ident, data_enum: &syn::DataEnum) -> To
 
     quote! {
         impl Wizard for #name {
-            fn wizard() -> Self {
-                Self::wizard_with_message("Select variant:")
+            fn wizard(backend: impl derive_wizard::Promptable) -> Self {
+                Self::wizard_with_message("Select variant:", backend)
             }
 
-            fn wizard_with_message(message: &str) -> Self {
+            fn wizard_with_message(message: &str, backend: impl derive_wizard::Promptable) -> Self {
                 use derive_wizard::{Question, prompt_one};
 
                 let variant_question = Question::select("variant")
@@ -137,7 +137,7 @@ fn process_enum_field(
                     let #field_ident = prompt_one(#field_ident).unwrap() #into;
                 }
             } else {
-                quote! { let #field_ident = <#field.ty>::wizard_with_message(#prompt_text); }
+                quote! { let #field_ident = <#field.ty>::wizard_with_message(#prompt_text, backend); }
             }
         }
     };

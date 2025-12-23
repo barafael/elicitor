@@ -40,6 +40,6 @@ struct User {
 }
 
 fn main() {
-    let user = User::wizard();
+    let user = User::wizard(derive_wizard::RequesttyWizard);
     println!("{user:#?}");
 }

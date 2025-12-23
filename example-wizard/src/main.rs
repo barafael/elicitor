@@ -22,11 +22,11 @@ fn is_valid_address(input: &str, _answers: &derive_wizard::Answers) -> Result<()
 
 fn main() {
     println!("=== Creating a new configuration ===");
-    let config = Config::wizard();
+    let config = Config::wizard(derive_wizard::RequesttyWizard);
     println!("Config: {config:#?}\n");
 
     println!("=== Editing the configuration with defaults ===");
     println!("The current values will be pre-filled. Press Enter to keep them or type new values.");
-    let updated_config = config.wizard_with_defaults();
+    let updated_config = config.wizard_with_defaults(derive_wizard::RequesttyWizard);
     println!("Updated Config: {updated_config:#?}");
 }

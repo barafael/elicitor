@@ -59,14 +59,14 @@ pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct)
 
     quote! {
         impl Wizard for #name {
-            fn wizard() -> Self {
+            fn wizard(backend: impl derive_wizard::Promptable) -> Self {
                 use derive_wizard::{Question, prompt_one};
                 #(#questions)*
                 #(#prompts)*
                 Self { #(#field_idents),* }
             }
 
-            fn wizard_with_defaults(self) -> Self {
+            fn wizard_with_defaults(self, backend: impl derive_wizard::Promptable) -> Self {
                 use derive_wizard::{Question, prompt_one};
                 #(#questions_with_defaults)*
                 #(#prompts_with_defaults)*
@@ -144,7 +144,7 @@ fn generate_field_code(
         PromptAttributes::None => Err(crate::WizardError::MissingPromptAttributes),
         PromptAttributes::Wizard => Ok(FieldCode {
             question: None,
-            prompt: quote! { let #ident = <#ty>::wizard(); },
+            prompt: quote! { let #ident = <#ty>::wizard(backend.clone()); },
         }),
         PromptAttributes::WizardWithMessage(prompt_text) => {
             if is_promptable_type(ty) {
@@ -187,7 +187,7 @@ fn generate_field_code(
             } else {
                 Ok(FieldCode {
                     question: None,
-                    prompt: quote! { let #ident = <#ty>::wizard_with_message(#prompt_text); },
+                    prompt: quote! { let #ident = <#ty>::wizard_with_message(#prompt_text, backend); },
                 })
             }
         }

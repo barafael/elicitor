@@ -124,11 +124,11 @@ struct Config {
 }
 
 // Create initial configuration
-let config = Config::wizard();
+let config = Config::wizard(derive_wizard::RequesttyWizard);
 println!("Initial config: {config:#?}");
 
 // Edit the configuration with defaults pre-filled
-let updated_config = config.wizard_with_defaults();
+let updated_config = config.wizard_with_defaults(derive_wizard::RequesttyWizard);
 println!("Updated config: {updated_config:#?}");
 ```
 

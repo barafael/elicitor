@@ -15,11 +15,11 @@ struct UserProfile {
 
 fn main() {
     println!("=== Creating a new user profile ===");
-    let profile = UserProfile::wizard();
+    let profile = UserProfile::wizard(derive_wizard::RequesttyWizard);
     println!("Created profile: {profile:#?}\n");
 
     println!("=== Editing the existing profile ===");
     println!("The current values will be pre-filled as defaults.");
-    let updated_profile = profile.wizard_with_defaults();
+    let updated_profile = profile.wizard_with_defaults(derive_wizard::RequesttyWizard);
     println!("Updated profile: {updated_profile:#?}");
 }

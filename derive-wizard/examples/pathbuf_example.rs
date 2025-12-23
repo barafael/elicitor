@@ -8,6 +8,6 @@ struct FileConfig {
 }
 
 fn main() {
-    let config = FileConfig::wizard();
+    let config = FileConfig::wizard(derive_wizard::RequesttyWizard);
     println!("  Input:  {:?}", config.path);
 }

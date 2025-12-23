@@ -12,6 +12,6 @@ struct LoginForm {
 }
 
 fn main() {
-    let form = LoginForm::wizard();
+    let form = LoginForm::wizard(derive_wizard::RequesttyWizard);
     println!("LoginForm: {form:#?}");
 }

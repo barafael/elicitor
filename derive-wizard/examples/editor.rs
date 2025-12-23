@@ -19,6 +19,6 @@ fn main() {
     println!("This demonstrates the #[editor] attribute");
     println!("which opens your preferred text editor for longer input.\n");
 
-    let article = Article::wizard();
+    let article = Article::wizard(derive_wizard::RequesttyWizard);
     println!("{article:#?}");
 }
