@@ -1,4 +1,4 @@
-use crate::{PromptAttr, WizardError, field_attrs, infer, is_promptable_type};
+use crate::{PromptAttributes, WizardError, field_attrs, infer, is_promptable_type};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned;
@@ -105,12 +105,12 @@ fn process_enum_field(
         .clone()
         .unwrap_or_else(|| syn::Ident::new(&format!("field_{index}"), field.span()));
 
-    let attrs = field_attrs::FieldAttrs::parse(field)?;
+    let attrs = field_attrs::FieldAttributes::parse(field)?;
 
     let code = match attrs.prompt {
-        PromptAttr::None => return Err((WizardError::MissingPrompt, field.span())),
-        PromptAttr::Wizard => quote! { let #field_ident = <#field.ty>::wizard(); },
-        PromptAttr::WizardWithMessage(prompt_text) => {
+        PromptAttributes::None => return Err((WizardError::MissingPrompt, field.span())),
+        PromptAttributes::Wizard => quote! { let #field_ident = <#field.ty>::wizard(); },
+        PromptAttributes::WizardWithMessage(prompt_text) => {
             let field_name = field.ident.as_ref().map_or_else(
                 || format!("{variant_name} field {index}"),
                 syn::Ident::to_string,

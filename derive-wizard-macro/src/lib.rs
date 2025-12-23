@@ -32,7 +32,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
 }
 
 #[derive(Clone)]
-enum PromptAttr {
+enum PromptAttributes {
     None,
     Wizard,
     WizardWithMessage(TokenStream),

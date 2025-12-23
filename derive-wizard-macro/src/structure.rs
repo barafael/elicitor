@@ -1,4 +1,9 @@
-use crate::{PromptAttr, error::WizardError, field_attrs, infer, is_promptable_type};
+use crate::{
+    PromptAttributes,
+    error::WizardError,
+    field_attrs::{self, FieldAttributes},
+    infer, is_promptable_type,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned;
@@ -8,14 +13,14 @@ pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct)
         .fields
         .iter()
         .map(|field| {
-            let attrs = field_attrs::FieldAttrs::parse(field)?;
+            let attrs = field_attrs::FieldAttributes::parse(field)?;
             let ident = field
                 .ident
                 .as_ref()
                 .ok_or_else(|| (WizardError::UnnamedField, field.span()))?;
 
             match attrs.prompt {
-                PromptAttr::None => Err((WizardError::MissingPrompt, field.span())),
+                PromptAttributes::None => Err((WizardError::MissingPrompt, field.span())),
                 _ => Ok((ident.clone(), attrs, field.ty.clone())),
             }
         })
@@ -28,18 +33,8 @@ pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct)
 
     let (questions, prompts, field_idents): (Vec<_>, Vec<_>, Vec<_>) = field_info
         .iter()
-        .map(|(ident, attrs, ty)| {
-            let field_gen = generate_field_code(
-                ident,
-                ty,
-                attrs.prompt.clone(),
-                attrs.mask,
-                attrs.editor,
-                attrs.validate_on_submit.clone(),
-                attrs.validate_on_key.clone(),
-                false,
-            )
-            .expect("Field attributes");
+        .map(|(ident, attr, ty)| {
+            let field_gen = generate_field_code(ident, ty, attr, false).expect("Field attributes");
             (field_gen.question, field_gen.prompt, ident.clone())
         })
         .fold((vec![], vec![], vec![]), |(mut qs, ps, ids), (q, p, id)| {
@@ -51,18 +46,8 @@ pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct)
 
     let (questions_with_defaults, prompts_with_defaults): (Vec<_>, Vec<_>) = field_info
         .iter()
-        .map(|(ident, attrs, ty)| {
-            let field_gen = generate_field_code(
-                ident,
-                ty,
-                attrs.prompt.clone(),
-                attrs.mask,
-                attrs.editor,
-                attrs.validate_on_submit.clone(),
-                attrs.validate_on_key.clone(),
-                true,
-            )
-            .expect("Field attributes");
+        .map(|(ident, attr, ty)| {
+            let field_gen = generate_field_code(ident, ty, attr, true).expect("Field attributes");
             (field_gen.question, field_gen.prompt)
         })
         .fold((vec![], vec![]), |(mut qs, ps), (q, p)| {
@@ -145,23 +130,26 @@ struct FieldCode {
 fn generate_field_code(
     ident: &syn::Ident,
     ty: &syn::Type,
-    prompt_attr: PromptAttr,
-    has_mask: bool,
-    has_editor: bool,
-    validate_on_submit: Option<TokenStream>,
-    validate_on_key: Option<TokenStream>,
+    field_attr: &FieldAttributes,
     use_defaults: bool,
 ) -> Result<FieldCode, crate::WizardError> {
-    match prompt_attr {
-        PromptAttr::None => Err(crate::WizardError::MissingPromptAttributes),
-        PromptAttr::Wizard => Ok(FieldCode {
+    let FieldAttributes {
+        prompt,
+        mask,
+        editor,
+        validate_on_submit,
+        validate_on_key,
+    } = field_attr;
+    match prompt {
+        PromptAttributes::None => Err(crate::WizardError::MissingPromptAttributes),
+        PromptAttributes::Wizard => Ok(FieldCode {
             question: None,
             prompt: quote! { let #ident = <#ty>::wizard(); },
         }),
-        PromptAttr::WizardWithMessage(prompt_text) => {
+        PromptAttributes::WizardWithMessage(prompt_text) => {
             if is_promptable_type(ty) {
                 let field_name = ident.to_string();
-                let question_type = infer::infer_question_type(ty, has_mask, has_editor);
+                let question_type = infer::infer_question_type(ty, *mask, *editor);
                 let into = infer::infer_target_type(ty)?;
 
                 let validation = validate_on_submit.as_ref().map(|validator| {
@@ -175,7 +163,7 @@ fn generate_field_code(
                 // Only add .default() if:
                 // 1. use_defaults is true
                 // 2. The question type supports defaults (not password or editor)
-                let default_value = if use_defaults && !has_mask && !has_editor {
+                let default_value = if use_defaults && !mask && !editor {
                     Some(generate_default_value_code(ident, ty))
                 } else {
                     None

@@ -1,18 +1,18 @@
 use syn::{Meta, spanned::Spanned};
 
-use crate::{PromptAttr, error::WizardError};
+use crate::{PromptAttributes, error::WizardError};
 
-pub struct FieldAttrs {
-    pub prompt: PromptAttr,
+pub struct FieldAttributes {
+    pub prompt: PromptAttributes,
     pub mask: bool,
     pub editor: bool,
     pub validate_on_submit: Option<proc_macro2::TokenStream>,
     pub validate_on_key: Option<proc_macro2::TokenStream>,
 }
 
-impl FieldAttrs {
+impl FieldAttributes {
     pub fn parse(field: &syn::Field) -> Result<Self, (WizardError, proc_macro2::Span)> {
-        let mut prompt = PromptAttr::None;
+        let mut prompt = PromptAttributes::None;
         let mut mask = false;
         let mut editor = false;
         let mut validate_on_submit = None;
@@ -22,8 +22,8 @@ impl FieldAttrs {
         for attr in &field.attrs {
             if attr.path().is_ident("prompt") {
                 prompt = match &attr.meta {
-                    Meta::Path(_) => PromptAttr::Wizard,
-                    Meta::List(list) => PromptAttr::WizardWithMessage(list.tokens.clone()),
+                    Meta::Path(_) => PromptAttributes::Wizard,
+                    Meta::List(list) => PromptAttributes::WizardWithMessage(list.tokens.clone()),
                     Meta::NameValue(_) => {
                         return Err((WizardError::InvalidPromptAttribute, attr.span()));
                     }
