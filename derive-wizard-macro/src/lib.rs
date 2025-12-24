@@ -48,3 +48,13 @@ fn is_promptable_type(ty: &syn::Type) -> bool {
         if tp.path.segments.last()
             .is_some_and(|s| PROMPTABLE.contains(&s.ident.to_string().as_str())))
 }
+
+trait Promptable {
+    fn prompt(&self, backend: impl PromptWizard) -> TokenStream;
+}
+
+impl Promptable for bool {
+    fn prompt(&self) -> TokenStream {
+        quote! { self.#ident.to_string() }
+    }
+}

@@ -4,19 +4,19 @@ pub use derive_wizard_macro::*;
 pub use requestty::{Answers, ExpandItem, ListItem, Question, prompt_one};
 
 pub trait Wizard: Sized {
-    fn wizard(backend: impl Promptable) -> Self;
+    fn wizard(backend: impl PromptWizard) -> Self;
 
-    fn wizard_with_message(message: &str, backend: impl Promptable) -> Self {
+    fn wizard_with_message(message: &str, backend: impl PromptWizard) -> Self {
         let _ = message;
         Self::wizard(backend)
     }
 
-    fn wizard_with_defaults(self, _backend: impl Promptable) -> Self {
+    fn wizard_with_defaults(self, _backend: impl PromptWizard) -> Self {
         self
     }
 }
 
-pub trait Promptable: Clone {
+pub trait PromptWizard: Clone {
     type Error;
     fn input<V>(
         &self,
@@ -59,7 +59,7 @@ pub trait Promptable: Clone {
 #[derive(Clone)]
 pub struct RequesttyWizard;
 
-impl Promptable for RequesttyWizard {
+impl PromptWizard for RequesttyWizard {
     type Error = requestty::ErrorKind;
 
     fn input<V>(

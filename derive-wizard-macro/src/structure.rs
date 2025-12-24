@@ -4,9 +4,35 @@ use crate::{
     field_attrs::{self, FieldAttributes},
     infer, is_promptable_type,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Literal, TokenStream};
 use quote::quote;
-use syn::spanned::Spanned;
+use syn::{Field, spanned::Spanned};
+
+pub fn implement_struct_wizard_2(name: &syn::Ident, data_struct: &syn::DataStruct) -> TokenStream {
+    for field in &data_struct.fields {
+        let field_ident = field.ident.to_owned();
+        dbg!(&field_ident);
+        let message_attribute = field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("prompt"));
+        let Some(message) = message_attribute else {
+            return WizardError::MissingPrompt.to_compile_error(message_attribute.span());
+        };
+        let prompt_attributes = match &message.meta {
+            syn::Meta::Path(_) => PromptAttributes::Wizard,
+            syn::Meta::List(meta_list) => {
+                let prompt = meta_list.tokens.clone();
+                PromptAttributes::WizardWithMessage(prompt)
+            }
+            syn::Meta::NameValue(_) => {
+                return WizardError::InvalidPromptAttribute.to_compile_error(message.span());
+            }
+        };
+        let has_mask = field.attrs.iter().any(|attr| attr.path().is_ident("mask"));
+    }
+    todo!()
+}
 
 pub fn implement_struct_wizard(name: &syn::Ident, data_struct: &syn::DataStruct) -> TokenStream {
     let field_info: Result<Vec<_>, _> = data_struct
@@ -122,6 +148,7 @@ fn generate_default_value_code(ident: &syn::Ident, ty: &syn::Type) -> TokenStrea
         quote! { self.#ident.to_string() }
     }
 }
+
 struct FieldCode {
     question: Option<TokenStream>,
     prompt: TokenStream,
