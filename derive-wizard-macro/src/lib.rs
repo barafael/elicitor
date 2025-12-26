@@ -406,15 +406,6 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
         };
     }
 
-    macro_rules! opt_val {
-        ($opt:expr) => {
-            match $opt {
-                Some(v) => quote! { Some(#v) },
-                None => quote! { None },
-            }
-        };
-    }
-
     match kind {
         QuestionKind::Input(q) => {
             let default = opt_str!(&q.default);
@@ -439,7 +430,10 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
             }
         }
         QuestionKind::Masked(q) => {
-            let mask = opt_val!(&q.mask);
+            let mask = q
+                .mask
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
@@ -451,9 +445,18 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
             }
         }
         QuestionKind::Int(q) => {
-            let default = opt_val!(&q.default);
-            let min = opt_val!(&q.min);
-            let max = opt_val!(&q.max);
+            let default = q
+                .default
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
+            let min = q
+                .min
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
+            let max = q
+                .max
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
@@ -467,9 +470,18 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
             }
         }
         QuestionKind::Float(q) => {
-            let default = opt_val!(&q.default);
-            let min = opt_val!(&q.min);
-            let max = opt_val!(&q.max);
+            let default = q
+                .default
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
+            let min = q
+                .min
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
+            let max = q
+                .max
+                .map(|v| quote! { Some(#v) })
+                .unwrap_or_else(|| quote! { None });
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {

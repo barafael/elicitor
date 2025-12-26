@@ -164,13 +164,15 @@ impl DefaultBackend {
                 if min.is_some() || max.is_some() {
                     q = q.validate(move |value, _| {
                         if let Some(min_val) = min
-                            && value < min_val {
-                                return Err(format!("Value must be at least {}", min_val));
-                            }
+                            && value < min_val
+                        {
+                            return Err(format!("Value must be at least {}", min_val));
+                        }
                         if let Some(max_val) = max
-                            && value > max_val {
-                                return Err(format!("Value must be at most {}", max_val));
-                            }
+                            && value > max_val
+                        {
+                            return Err(format!("Value must be at most {}", max_val));
+                        }
                         Ok(())
                     });
                 }
@@ -196,13 +198,15 @@ impl DefaultBackend {
                 if min.is_some() || max.is_some() {
                     q = q.validate(move |value, _| {
                         if let Some(min_val) = min
-                            && value < min_val {
-                                return Err(format!("Value must be at least {}", min_val));
-                            }
+                            && value < min_val
+                        {
+                            return Err(format!("Value must be at least {}", min_val));
+                        }
                         if let Some(max_val) = max
-                            && value > max_val {
-                                return Err(format!("Value must be at most {}", max_val));
-                            }
+                            && value > max_val
+                        {
+                            return Err(format!("Value must be at most {}", max_val));
+                        }
                         Ok(())
                     });
                 }
