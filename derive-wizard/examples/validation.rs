@@ -23,7 +23,7 @@ struct ServerConfig {
 }
 
 /// Validates that the address is in host:port format
-fn validate_address(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+pub fn validate_address(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
     if input.contains(':') && input.len() >= 3 && !input.starts_with(':') && !input.ends_with(':') {
         let parts: Vec<&str> = input.split(':').collect();
         if parts.len() == 2 && !parts[0].is_empty() && parts[1].parse::<u16>().is_ok() {
@@ -34,7 +34,7 @@ fn validate_address(input: &str, _answers: &derive_wizard::Answers) -> Result<()
 }
 
 /// Validates username: 3-20 chars, alphanumeric and underscores only
-fn validate_username(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+pub fn validate_username(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
     if input.len() < 3 {
         return Err("Username must be at least 3 characters long".to_string());
     }
@@ -48,7 +48,7 @@ fn validate_username(input: &str, _answers: &derive_wizard::Answers) -> Result<(
 }
 
 /// Validates email address format
-fn validate_email(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+pub fn validate_email(input: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
     if !input.contains('@') {
         return Err("Email must contain an @ symbol".to_string());
     }
