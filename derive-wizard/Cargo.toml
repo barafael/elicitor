@@ -13,11 +13,29 @@ requestty = "0.6"
 thiserror = "2"
 egui = { version = "0.29", optional = true }
 eframe = { version = "0.29", optional = true }
+dialoguer = { version = "0.11", optional = true }
 
 [features]
 default = []
 egui-backend = ["egui", "eframe"]
+dialoguer-backend = ["dialoguer"]
 
 [[example]]
 name = "egui_demo"
 required-features = ["egui-backend"]
+
+[[example]]
+name = "egui_defaults_demo"
+required-features = ["egui-backend"]
+
+[[example]]
+name = "dialoguer_demo"
+required-features = ["dialoguer-backend"]
+
+[[example]]
+name = "dialoguer_defaults_demo"
+required-features = ["dialoguer-backend"]
+
+[[example]]
+name = "dialoguer_password_demo"
+required-features = ["dialoguer-backend"]

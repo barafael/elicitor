@@ -1,9 +1,12 @@
-#![doc = include_str!("../../../../README.md")]
+#![doc = include_str!("../../README.md")]
 
 pub mod backend;
 
 #[cfg(feature = "egui-backend")]
 pub mod egui_backend;
+
+#[cfg(feature = "dialoguer-backend")]
+pub mod dialoguer_backend;
 
 pub use backend::{AnswerValue, Answers, BackendError, InterviewBackend, TestBackend};
 pub use derive_wizard_macro::*;
@@ -12,6 +15,9 @@ pub use requestty::{ExpandItem, ListItem, Question, prompt_one};
 
 #[cfg(feature = "egui-backend")]
 pub use egui_backend::EguiBackend;
+
+#[cfg(feature = "dialoguer-backend")]
+pub use dialoguer_backend::DialoguerBackend;
 
 pub trait Wizard: Sized {
     /// Get the interview structure for this type
