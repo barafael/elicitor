@@ -2,12 +2,15 @@
 name = "derive-wizard"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/barafael/derive-wizard"
+license = "MIT OR Apache-2.0"
+description = "Derives interactive wizard-like user input for Rust types. Backend-agnostic (supports at least requestty and egui)."
 
 [dependencies]
-derive-wizard-macro = { path = "../derive-wizard-macro" }
-derive-wizard-types = { path = "../derive-wizard-types" }
-requestty = "0.6.3"
-thiserror = "2.0"
+derive-wizard-macro = { version = "0.1", path = "../derive-wizard-macro" }
+derive-wizard-types = { version = "0.1", path = "../derive-wizard-types" }
+requestty = "0.6"
+thiserror = "2"
 egui = { version = "0.29", optional = true }
 eframe = { version = "0.29", optional = true }
 
