@@ -11,6 +11,8 @@ pub mod dialoguer_backend;
 pub use backend::{AnswerValue, Answers, BackendError, InterviewBackend, TestBackend};
 pub use derive_wizard_macro::*;
 pub use derive_wizard_types::{interview, question};
+
+#[cfg(feature = "requestty-backend")]
 pub use requestty::{ExpandItem, ListItem, Question, prompt_one};
 
 #[cfg(feature = "egui-backend")]
@@ -26,9 +28,10 @@ pub trait Wizard: Sized {
     /// Build this type from collected answers
     fn from_answers(answers: &Answers) -> Result<Self, BackendError>;
 
-    /// Execute the interview with the default backend
+    /// Execute the interview with the default backend (requestty)
+    #[cfg(feature = "requestty-backend")]
     fn wizard() -> Self {
-        Self::wizard_with_backend(&DefaultBackend)
+        Self::wizard_with_backend(&RequesttyBackend)
     }
 
     /// Execute the interview with a custom backend
@@ -40,20 +43,24 @@ pub trait Wizard: Sized {
         Self::from_answers(&answers).expect("Failed to build from answers")
     }
 
+    #[cfg(feature = "requestty-backend")]
     fn wizard_with_message(message: &str) -> Self {
         let _ = message;
         Self::wizard()
     }
 
+    #[cfg(feature = "requestty-backend")]
     fn wizard_with_defaults(self) -> Self {
         self
     }
 }
 
-/// Default backend using requestty for interactive CLI prompts
-pub struct DefaultBackend;
+#[cfg(feature = "requestty-backend")]
+/// Requestty backend for interactive CLI prompts
+pub struct RequesttyBackend;
 
-impl DefaultBackend {
+#[cfg(feature = "requestty-backend")]
+impl RequesttyBackend {
     fn execute_section(
         &self,
         section: &interview::Section,
@@ -251,7 +258,8 @@ impl DefaultBackend {
     }
 }
 
-impl InterviewBackend for DefaultBackend {
+#[cfg(feature = "requestty-backend")]
+impl InterviewBackend for RequesttyBackend {
     fn execute(&self, interview: &interview::Interview) -> Result<Answers, BackendError> {
         let mut answers = Answers::new();
 

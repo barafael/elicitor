@@ -59,7 +59,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
             fn wizard_with_defaults(self) -> Self {
                 use derive_wizard::InterviewBackend;
                 let interview = #interview_with_defaults_code;
-                let answers = derive_wizard::DefaultBackend
+                let answers = derive_wizard::RequesttyBackend
                     .execute(&interview)
                     .expect("Failed to execute interview");
                 Self::from_answers(&answers).expect("Failed to build from answers")
