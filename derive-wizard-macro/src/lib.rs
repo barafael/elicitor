@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use quote::quote;
 use syn::{Data, Fields, Lit, Meta, Type, parse_macro_input};
 
@@ -34,7 +35,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
     let from_answers_code = match &input.data {
         Data::Struct(data) => generate_from_answers_struct(name, data),
         Data::Enum(data) => generate_from_answers_enum(name, data),
-        _ => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
     };
 
     let interview_with_defaults_code = match &input.data {
@@ -43,7 +44,7 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
             // For enums, we can't easily provide defaults, so just return the base interview
             quote! { Self::interview() }
         }
-        _ => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
     };
 
     TokenStream::from(quote! {
@@ -116,7 +117,7 @@ fn build_interview(input: &syn::DeriveInput) -> Interview {
                 .collect();
             vec![Section::Alternatives(0, alternatives)]
         }
-        _ => vec![],
+        Data::Union(_) => vec![],
     };
 
     Interview { sections }
@@ -124,8 +125,8 @@ fn build_interview(input: &syn::DeriveInput) -> Interview {
 
 fn build_question(field: &syn::Field, idx: Option<usize>) -> Question {
     let field_name = idx
-        .map(|i| format!("field_{}", i))
-        .or_else(|| field.ident.as_ref().map(|i| i.to_string()))
+        .map(|i| format!("field_{i}"))
+        .or_else(|| field.ident.as_ref().map(Ident::to_string))
         .unwrap();
 
     let attrs = FieldAttrs::extract(&field.attrs, &field_name);
@@ -151,7 +152,7 @@ impl FieldAttrs {
         let validate = extract_string_attr(attrs, "validate");
         Self {
             prompt: extract_string_attr(attrs, "prompt")
-                .unwrap_or_else(|| format!("Enter {}:", field_name)),
+                .unwrap_or_else(|| format!("Enter {field_name}:")),
             mask: has_attr(attrs, "mask"),
             editor: has_attr(attrs, "editor"),
             validate_on_key: extract_string_attr(attrs, "validate_on_key").or(validate.clone()),
@@ -240,7 +241,7 @@ fn extract_string_attr(attrs: &[syn::Attribute], name: &str) -> Option<String> {
                     None
                 }
             }
-            _ => None,
+            Meta::Path(_) => None,
         }
     })
 }
@@ -271,7 +272,7 @@ fn extract_int_attr(attrs: &[syn::Attribute], name: &str) -> Option<i64> {
                     None
                 }
             }
-            _ => None,
+            Meta::Path(_) => None,
         }
     })
 }
@@ -299,7 +300,7 @@ fn extract_float_attr(attrs: &[syn::Attribute], name: &str) -> Option<f64> {
                     None
                 }
             }
-            _ => None,
+            Meta::Path(_) => None,
         }
     })
 }
@@ -398,8 +399,7 @@ fn generate_section_code(section: &Section) -> proc_macro2::TokenStream {
 fn generate_question_code(question: &Question) -> proc_macro2::TokenStream {
     let id = question
         .id()
-        .map(|id| quote! { Some(#id.to_string()) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote!(None), |id| quote! { Some(#id.to_string()) });
     let name = question.name();
     let prompt = question.prompt();
     let kind = generate_question_kind_code(question.kind());
@@ -443,10 +443,7 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
             }
         }
         QuestionKind::Masked(q) => {
-            let mask = q
-                .mask
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
+            let mask = q.mask.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
@@ -460,16 +457,9 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
         QuestionKind::Int(q) => {
             let default = q
                 .default
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let min = q
-                .min
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let max = q
-                .max
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
+                .map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let validate_on_key = match &q.validate_on_key {
                 Some(v) => quote! { Some(#v.to_string()) },
                 None => quote! { None },
@@ -491,16 +481,9 @@ fn generate_question_kind_code(kind: &QuestionKind) -> proc_macro2::TokenStream 
         QuestionKind::Float(q) => {
             let default = q
                 .default
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let min = q
-                .min
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let max = q
-                .max
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
+                .map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
@@ -563,7 +546,7 @@ fn generate_from_answers_enum(name: &syn::Ident, data: &syn::DataEnum) -> proc_m
             },
             Fields::Unnamed(fields) => {
                 let constructions = fields.unnamed.iter().enumerate().map(|(i, field)| {
-                    let field_name = format!("field_{}", i);
+                    let field_name = format!("field_{i}");
                     generate_answer_extraction(&field.ty, &field_name)
                 });
                 quote! {
@@ -653,8 +636,7 @@ fn generate_question_with_default_code(
 ) -> proc_macro2::TokenStream {
     let id = question
         .id()
-        .map(|id| quote! { Some(#id.to_string()) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote!(None), |id| quote! { Some(#id.to_string()) });
     let name = question.name();
     let prompt = question.prompt();
 
@@ -700,14 +682,8 @@ fn generate_question_with_default_code(
             }
         }
         QuestionKind::Int(q) => {
-            let min = q
-                .min
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let max = q
-                .max
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
+            let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let validate_on_key = match &q.validate_on_key {
                 Some(v) => quote! { Some(#v.to_string()) },
                 None => quote! { None },
@@ -727,14 +703,8 @@ fn generate_question_with_default_code(
             }
         }
         QuestionKind::Float(q) => {
-            let min = q
-                .min
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
-            let max = q
-                .max
-                .map(|v| quote! { Some(#v) })
-                .unwrap_or_else(|| quote! { None });
+            let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
+            let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let validate_on_key = match &q.validate_on_key {
                 Some(v) => quote! { Some(#v.to_string()) },
                 None => quote! { None },

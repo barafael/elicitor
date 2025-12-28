@@ -52,10 +52,6 @@ enum Gender {
     ),
 }
 
-// fn main() {
-//    let magic = ShowCase::wizard();
-//    println!("Config: {magic:#?}");
-// }
 ```
 
 ### Password Fields with `#[mask]`
@@ -104,14 +100,14 @@ struct Article {
 
 **Note**: `#[mask]` and `#[editor]` are mutually exclusive and cannot be used on the same field.
 
-## Using Defaults with `wizard_with_defaults()`
+## Using the Builder API
 
-The `wizard_with_defaults()` method allows you to pre-fill wizard questions with existing values from an instance. This is useful for editing existing configurations or updating user profiles:
+The builder API provides a fluent interface for configuring and executing wizards:
 
 ```rust,no_run
 use derive_wizard::Wizard;
 
-#[derive(Debug, Wizard)]
+#[derive(Debug, Clone, Wizard)]
 struct Config {
     #[prompt("Enter the server address:")]
     server: String,
@@ -123,21 +119,53 @@ struct Config {
     use_ssl: bool,
 }
 
-// Create initial configuration
-let config = Config::wizard();
-println!("Initial config: {config:#?}");
+// Simple usage with default backend (requestty)
+let config = Config::wizard_builder().build();
+println!("Config: {config:#?}");
 
-// Edit the configuration with defaults pre-filled
-let updated_config = config.wizard_with_defaults();
+// Edit configuration with defaults pre-filled
+let updated_config = Config::wizard_builder()
+    .with_defaults(config)
+    .build();
 println!("Updated config: {updated_config:#?}");
 ```
 
-When `wizard_with_defaults()` is called:
+Additional examples:
 
-- For **String** fields: the current value is pre-filled (if not empty)
+```rust,no_run
+use derive_wizard::Wizard;
+
+# #[derive(Debug, Clone, Wizard)]
+# struct Config {
+#     #[prompt("Enter the server address:")]
+#     server: String,
+#     #[prompt("Enter the port:")]
+#     port: u16,
+#     #[prompt("Enable SSL?")]
+#     use_ssl: bool,
+# }
+// With custom backend (e.g., requestty)
+let backend = derive_wizard::RequesttyBackend::new();
+let config = Config::wizard_builder()
+    .with_backend(backend)
+    .build();
+println!("Config: {config:#?}");
+
+// Combine defaults with custom backend
+let backend = derive_wizard::RequesttyBackend::new();
+let updated_config = Config::wizard_builder()
+    .with_defaults(config)
+    .with_backend(backend)
+    .build();
+println!("Updated config: {updated_config:#?}");
+```
+
+When `with_defaults()` is used:
+
+- For **String** fields: the current value is shown as a hint/placeholder
 - For **numeric** fields (integers and floats): the current value is shown as default
 - For **bool** fields: the current value is pre-selected
-- For **password** (`#[mask]`) and **editor** (`#[editor]`) fields: defaults are not supported by the underlying library, so no default is shown
+- For **password** (`#[mask]`) and **editor** (`#[editor]`) fields: defaults are shown as hints (backend-dependent)
 
 ## Supported Question Types
 

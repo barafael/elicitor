@@ -35,9 +35,8 @@ impl RequesttyBackend {
                     .default(*default_idx)
                     .build();
 
-                let answer = requestty::prompt_one(question).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(question)
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 let selected_idx = match answer {
                     requestty::Answer::ListItem(item) => item.index,
@@ -72,9 +71,8 @@ impl RequesttyBackend {
                     q = q.default(default.clone());
                 }
 
-                let answer = requestty::prompt_one(q.build()).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q.build())
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::String(s) = answer {
                     answers.insert(id.to_string(), AnswerValue::String(s));
@@ -87,9 +85,8 @@ impl RequesttyBackend {
                     q = q.default(default.clone());
                 }
 
-                let answer = requestty::prompt_one(q.build()).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q.build())
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::String(s) = answer {
                     answers.insert(id.to_string(), AnswerValue::String(s));
@@ -102,9 +99,8 @@ impl RequesttyBackend {
                     q = q.mask(mask);
                 }
 
-                let answer = requestty::prompt_one(q.build()).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q.build())
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::String(s) = answer {
                     answers.insert(id.to_string(), AnswerValue::String(s));
@@ -125,20 +121,19 @@ impl RequesttyBackend {
                         if let Some(min_val) = min
                             && value < min_val
                         {
-                            return Err(format!("Value must be at least {}", min_val));
+                            return Err(format!("Value must be at least {min_val}"));
                         }
                         if let Some(max_val) = max
                             && value > max_val
                         {
-                            return Err(format!("Value must be at most {}", max_val));
+                            return Err(format!("Value must be at most {max_val}"));
                         }
                         Ok(())
                     });
                 }
 
-                let answer = requestty::prompt_one(q.build()).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q.build())
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::Int(i) = answer {
                     answers.insert(id.to_string(), AnswerValue::Int(i));
@@ -159,20 +154,19 @@ impl RequesttyBackend {
                         if let Some(min_val) = min
                             && value < min_val
                         {
-                            return Err(format!("Value must be at least {}", min_val));
+                            return Err(format!("Value must be at least {min_val}"));
                         }
                         if let Some(max_val) = max
                             && value > max_val
                         {
-                            return Err(format!("Value must be at most {}", max_val));
+                            return Err(format!("Value must be at most {max_val}"));
                         }
                         Ok(())
                     });
                 }
 
-                let answer = requestty::prompt_one(q.build()).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q.build())
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::Float(f) = answer {
                     answers.insert(id.to_string(), AnswerValue::Float(f));
@@ -184,9 +178,8 @@ impl RequesttyBackend {
                     .default(confirm_q.default)
                     .build();
 
-                let answer = requestty::prompt_one(q).map_err(|e| {
-                    BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                })?;
+                let answer = requestty::prompt_one(q)
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
 
                 if let requestty::Answer::Bool(b) = answer {
                     answers.insert(id.to_string(), AnswerValue::Bool(b));
