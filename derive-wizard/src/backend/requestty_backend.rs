@@ -1,6 +1,5 @@
 use crate::backend::{BackendError, InterviewBackend};
-use crate::interview::Section;
-use crate::question::{Question, QuestionKind};
+use crate::interview::{Question, QuestionKind};
 use crate::{AnswerValue, Answers};
 
 /// Requestty backend for interactive CLI prompts
@@ -9,51 +8,6 @@ pub struct RequesttyBackend;
 impl RequesttyBackend {
     pub fn new() -> Self {
         Self
-    }
-
-    fn execute_section(
-        &self,
-        section: &Section,
-        answers: &mut Answers,
-    ) -> Result<(), BackendError> {
-        match section {
-            Section::Empty => Ok(()),
-            Section::Sequence(seq) => {
-                for question in &seq.sequence {
-                    self.execute_question(question, answers)?;
-                }
-                Ok(())
-            }
-            Section::Alternatives(default_idx, alternatives) => {
-                // Build the select question
-                let choices: Vec<String> =
-                    alternatives.iter().map(|alt| alt.name.clone()).collect();
-
-                let question = requestty::Question::select("choice")
-                    .message("Select an option")
-                    .choices(choices.clone())
-                    .default(*default_idx)
-                    .build();
-
-                let answer = requestty::prompt_one(question)
-                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
-
-                let selected_idx = match answer {
-                    requestty::Answer::ListItem(item) => item.index,
-                    _ => return Err(BackendError::ExecutionError("Expected list item".into())),
-                };
-
-                // Store the selected alternative name
-                answers.insert(
-                    "selected_alternative".to_string(),
-                    AnswerValue::String(choices[selected_idx].clone()),
-                );
-
-                // Execute the follow-up section for the selected alternative
-                self.execute_section(&alternatives[selected_idx].section, answers)?;
-                Ok(())
-            }
-        }
     }
 
     fn execute_question(
@@ -185,10 +139,44 @@ impl RequesttyBackend {
                     answers.insert(id.to_string(), AnswerValue::Bool(b));
                 }
             }
-            QuestionKind::Nested(_) => {
-                return Err(BackendError::ExecutionError(
-                    "Nested questions should be inlined".into(),
-                ));
+            QuestionKind::Sequence(questions) => {
+                for q in questions {
+                    self.execute_question(q, answers)?;
+                }
+            }
+            QuestionKind::Alternative(default_idx, alternatives) => {
+                // Build the select question for alternatives
+                let choices: Vec<String> = alternatives
+                    .iter()
+                    .map(|alt| alt.name().to_string())
+                    .collect();
+
+                let q = requestty::Question::select(id)
+                    .message(question.prompt())
+                    .choices(choices.clone())
+                    .default(*default_idx)
+                    .build();
+
+                let answer = requestty::prompt_one(q)
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
+
+                let selected_idx = match answer {
+                    requestty::Answer::ListItem(item) => item.index,
+                    _ => return Err(BackendError::ExecutionError("Expected list item".into())),
+                };
+
+                // Store the selected alternative name
+                answers.insert(
+                    "selected_alternative".to_string(),
+                    AnswerValue::String(choices[selected_idx].clone()),
+                );
+
+                // Execute the selected alternative's questions
+                if let QuestionKind::Alternative(_, alts) = alternatives[selected_idx].kind() {
+                    for q in alts {
+                        self.execute_question(q, answers)?;
+                    }
+                }
             }
         }
 
@@ -206,8 +194,8 @@ impl InterviewBackend for RequesttyBackend {
     fn execute(&self, interview: &crate::interview::Interview) -> Result<Answers, BackendError> {
         let mut answers = Answers::new();
 
-        for section in &interview.sections {
-            self.execute_section(section, &mut answers)?;
+        for question in &interview.sections {
+            self.execute_question(question, &mut answers)?;
         }
 
         Ok(answers)

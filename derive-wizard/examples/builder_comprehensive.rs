@@ -33,7 +33,7 @@ fn main() {
     {
         println!("--- Example 2: Builder with Dialoguer Backend ---");
         let backend = derive_wizard::DialoguerBackend::new();
-        let profile2 = UserProfile::builder().with_backend(backend).build();
+        let profile2 = UserProfile::wizard_builder().with_backend(backend).build();
         println!("Profile: {:#?}\n", profile2);
     }
 
@@ -45,7 +45,7 @@ fn main() {
             .with_title("User Profile")
             .with_window_size([450.0, 350.0]);
 
-        let profile3 = UserProfile::builder().with_backend(backend).build();
+        let profile3 = UserProfile::wizard_builder().with_backend(backend).build();
         println!("Profile: {:#?}\n", profile3);
     }
 
@@ -79,7 +79,7 @@ fn main() {
 
         let backend = derive_wizard::DialoguerBackend::new();
 
-        let profile5 = UserProfile::builder()
+        let profile5 = UserProfile::wizard_builder()
             .with_defaults(defaults)
             .with_backend(backend)
             .build();

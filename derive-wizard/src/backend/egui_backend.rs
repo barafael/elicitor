@@ -1,7 +1,6 @@
 #[cfg(feature = "egui-backend")]
 use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend};
-use crate::interview::{Interview, Section, Sequence};
-use crate::question::{Question, QuestionKind};
+use crate::interview::{Interview, Question, QuestionKind};
 
 /// egui-based interview backend
 pub struct EguiBackend {
@@ -127,11 +126,11 @@ impl EguiWizardApp {
                 return;
             }
 
-            // Show all sections in a scrollable area
+            // Show all questions in a scrollable area
             egui::ScrollArea::vertical().show(ui, |ui| {
-                let sections: Vec<_> = self.interview.sections.clone();
-                for (section_idx, section) in sections.iter().enumerate() {
-                    self.show_section(ui, section, section_idx);
+                let questions: Vec<_> = self.interview.sections.clone();
+                for (question_idx, question) in questions.iter().enumerate() {
+                    self.show_question_recursive(ui, question, question_idx);
                     ui.add_space(15.0);
                 }
 
@@ -161,62 +160,64 @@ impl EguiWizardApp {
         });
     }
 
-    fn show_section(&mut self, ui: &mut egui::Ui, section: &Section, section_idx: usize) {
-        match section {
-            Section::Empty => {}
-            Section::Sequence(seq) => {
-                self.show_sequence(ui, seq);
-            }
-            Section::Alternatives(default_idx, alternatives) => {
-                self.show_alternatives(ui, *default_idx, alternatives, section_idx);
-            }
-        }
-    }
-
-    fn show_sequence(&mut self, ui: &mut egui::Ui, sequence: &Sequence) {
-        for question in &sequence.sequence {
-            self.show_question(ui, question);
-            ui.add_space(8.0);
-        }
-    }
-
-    fn show_alternatives(
+    fn show_question_recursive(
         &mut self,
         ui: &mut egui::Ui,
-        default_idx: usize,
-        alternatives: &[crate::interview::Alternative],
-        section_idx: usize,
+        question: &Question,
+        question_idx: usize,
     ) {
-        let alt_key = format!("section_{}", section_idx);
-
-        ui.label("Select an option:");
-        ui.add_space(5.0);
-
-        let selected = self
-            .state
-            .selected_alternatives
-            .get(&alt_key)
-            .copied()
-            .unwrap_or(default_idx);
-
-        for (idx, alternative) in alternatives.iter().enumerate() {
-            if ui.radio(selected == idx, &alternative.name).clicked() {
-                self.state
-                    .selected_alternatives
-                    .insert(alt_key.clone(), idx);
+        match question.kind() {
+            QuestionKind::Sequence(questions) => {
+                for (idx, q) in questions.iter().enumerate() {
+                    self.show_question_recursive(ui, q, question_idx * 1000 + idx);
+                    ui.add_space(8.0);
+                }
             }
-        }
+            QuestionKind::Alternative(default_idx, alternatives) => {
+                let alt_key = format!("question_{}", question_idx);
 
-        ui.add_space(10.0);
+                ui.label(question.prompt());
+                ui.add_space(5.0);
 
-        // Show follow-up questions for selected alternative
-        if let Some(alt) = alternatives.get(selected) {
-            if !matches!(alt.section, Section::Empty) {
-                ui.group(|ui| {
-                    ui.label(format!("Details for '{}':", alt.name));
-                    ui.add_space(5.0);
-                    self.show_section(ui, &alt.section, section_idx * 1000 + selected);
-                });
+                let selected = self
+                    .state
+                    .selected_alternatives
+                    .get(&alt_key)
+                    .copied()
+                    .unwrap_or(*default_idx);
+
+                for (idx, alternative) in alternatives.iter().enumerate() {
+                    if ui.radio(selected == idx, alternative.name()).clicked() {
+                        self.state
+                            .selected_alternatives
+                            .insert(alt_key.clone(), idx);
+                    }
+                }
+
+                ui.add_space(10.0);
+
+                // Show follow-up questions for selected alternative
+                if let Some(alt) = alternatives.get(selected) {
+                    if let QuestionKind::Alternative(_, alts) = alt.kind() {
+                        if !alts.is_empty() {
+                            ui.group(|ui| {
+                                ui.label(format!("Details for '{}':", alt.name()));
+                                ui.add_space(5.0);
+                                for (idx, q) in alts.iter().enumerate() {
+                                    self.show_question_recursive(
+                                        ui,
+                                        q,
+                                        question_idx * 1000 + selected * 100 + idx,
+                                    );
+                                    ui.add_space(8.0);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            _ => {
+                self.show_question(ui, question);
             }
         }
     }
@@ -311,10 +312,11 @@ impl EguiWizardApp {
                 ui.checkbox(&mut value, "Yes");
                 *buffer = value.to_string();
             }
-            QuestionKind::Nested(_) => {
+            QuestionKind::Sequence(_) | QuestionKind::Alternative(_, _) => {
+                // These are handled in show_question_recursive
                 ui.colored_label(
                     egui::Color32::RED,
-                    "Error: Nested questions should be inlined",
+                    "Error: Sequence/Alternative should be handled recursively",
                 );
             }
         }
@@ -325,9 +327,9 @@ impl EguiWizardApp {
         let mut answers = Answers::new();
         let mut all_valid = true;
 
-        let sections = self.interview.sections.clone();
-        for (section_idx, section) in sections.iter().enumerate() {
-            if !self.validate_section(section, section_idx, &mut answers) {
+        let questions = self.interview.sections.clone();
+        for (question_idx, question) in questions.iter().enumerate() {
+            if !self.validate_question_recursive(question, question_idx, &mut answers) {
                 all_valid = false;
             }
         }
@@ -335,25 +337,24 @@ impl EguiWizardApp {
         if all_valid { Some(answers) } else { None }
     }
 
-    fn validate_section(
+    fn validate_question_recursive(
         &mut self,
-        section: &Section,
-        section_idx: usize,
+        question: &Question,
+        question_idx: usize,
         answers: &mut Answers,
     ) -> bool {
-        match section {
-            Section::Empty => true,
-            Section::Sequence(seq) => {
+        match question.kind() {
+            QuestionKind::Sequence(questions) => {
                 let mut valid = true;
-                for question in &seq.sequence {
-                    if !self.validate_question(question, answers) {
+                for (idx, q) in questions.iter().enumerate() {
+                    if !self.validate_question_recursive(q, question_idx * 1000 + idx, answers) {
                         valid = false;
                     }
                 }
                 valid
             }
-            Section::Alternatives(default_idx, alternatives) => {
-                let alt_key = format!("section_{}", section_idx);
+            QuestionKind::Alternative(default_idx, alternatives) => {
+                let alt_key = format!("question_{}", question_idx);
                 let selected = self
                     .state
                     .selected_alternatives
@@ -364,14 +365,29 @@ impl EguiWizardApp {
                 if let Some(alt) = alternatives.get(selected) {
                     answers.insert(
                         "selected_alternative".to_string(),
-                        AnswerValue::String(alt.name.clone()),
+                        AnswerValue::String(alt.name().to_string()),
                     );
 
-                    self.validate_section(&alt.section, section_idx * 1000 + selected, answers)
+                    if let QuestionKind::Alternative(_, alts) = alt.kind() {
+                        let mut valid = true;
+                        for (idx, q) in alts.iter().enumerate() {
+                            if !self.validate_question_recursive(
+                                q,
+                                question_idx * 1000 + selected * 100 + idx,
+                                answers,
+                            ) {
+                                valid = false;
+                            }
+                        }
+                        valid
+                    } else {
+                        true
+                    }
                 } else {
                     true
                 }
             }
+            _ => self.validate_question(question, answers),
         }
     }
 
@@ -452,7 +468,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::Bool(val));
                 true
             }
-            QuestionKind::Nested(_) => false,
+            QuestionKind::Sequence(_) | QuestionKind::Alternative(_, _) => {
+                // These are handled in validate_question_recursive
+                false
+            }
         }
     }
 }

@@ -1,36 +1,181 @@
-use crate::question::Question;
+use crate::default::QuestionDefault;
 
 /// A sequence of sections, which contain questions.
 #[derive(Debug, Clone)]
 pub struct Interview {
-    pub sections: Vec<Section>,
+    pub sections: Vec<Question>,
 }
 
-/// A section may be either questions in sequence or a single-choice selection question.
 #[derive(Debug, Clone)]
-pub enum Section {
-    Empty,
+pub struct Question {
+    /// The unique identifier for the question.
+    id: Option<String>,
 
-    /// A sequence of questions.
-    Sequence(Sequence),
+    /// The field name.
+    name: String,
 
-    /// A single-choice selection from a list.
-    Alternatives(usize, Vec<Alternative>),
+    /// The prompt message to display.
+    prompt: String,
+
+    kind: QuestionKind,
 }
 
-/// A sequence of questions.
-#[derive(Debug, Clone)]
-pub struct Sequence {
-    /// The list of questions to ask in sequence.
-    pub sequence: Vec<Question>,
+impl Question {
+    /// Create a new question with the given id, name, prompt, and kind.
+    pub fn new(id: Option<String>, name: String, prompt: String, kind: QuestionKind) -> Self {
+        Self {
+            id,
+            name,
+            prompt,
+            kind,
+        }
+    }
+
+    pub fn id(&self) -> Option<&str> {
+        self.id.as_deref()
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn prompt(&self) -> &str {
+        &self.prompt
+    }
+
+    pub fn kind(&self) -> &QuestionKind {
+        &self.kind
+    }
+
+    /// Set the default value for this question based on its kind.
+    pub fn set_default(&mut self, value: impl Into<QuestionDefault>) {
+        match (&mut self.kind, value.into()) {
+            (QuestionKind::Input(q), QuestionDefault::String(v)) => {
+                q.default = Some(v);
+            }
+            (QuestionKind::Multiline(q), QuestionDefault::String(v)) => {
+                q.default = Some(v);
+            }
+            (QuestionKind::Int(q), QuestionDefault::Int(v)) => {
+                q.default = Some(v);
+            }
+            (QuestionKind::Float(q), QuestionDefault::Float(v)) => {
+                q.default = Some(v);
+            }
+            (QuestionKind::Confirm(q), QuestionDefault::Bool(v)) => {
+                q.default = v;
+            }
+            _ => {}
+        }
+    }
 }
 
-/// Single-choice alternatives.
+/// Possible question kinds which a wizard may ask.
 #[derive(Debug, Clone)]
-pub struct Alternative {
-    /// The name of the alternative.
-    pub name: String,
+pub enum QuestionKind {
+    /// A text input question for string values.
+    Input(InputQuestion),
 
-    /// The question to ask.
-    pub section: Section,
+    /// A multi-line text input.
+    Multiline(MultilineQuestion),
+
+    /// A password/masked input question.
+    Masked(MaskedQuestion),
+
+    /// A number input question (integers).
+    Int(IntQuestion),
+
+    /// A number input question (floating point).
+    Float(FloatQuestion),
+
+    /// A yes/no confirmation question.
+    Confirm(ConfirmQuestion),
+
+    Sequence(Vec<Question>),
+
+    Alternative(usize, Vec<Question>),
+}
+
+/// Configuration for a text input question.
+#[derive(Debug, Clone)]
+pub struct InputQuestion {
+    /// Optional default value.
+    pub default: Option<String>,
+
+    /// Validation function to call on each keystroke.
+    pub validate_on_key: Option<String>,
+
+    /// Validation function to call on submission.
+    pub validate_on_submit: Option<String>,
+}
+
+/// Configuration for a multi-line text editor question.
+#[derive(Debug, Clone)]
+pub struct MultilineQuestion {
+    /// Optional default value.
+    pub default: Option<String>,
+
+    /// Validation function to call on each keystroke.
+    pub validate_on_key: Option<String>,
+
+    /// Validation function to call on submission.
+    pub validate_on_submit: Option<String>,
+}
+
+/// Configuration for a password/masked input question.
+#[derive(Debug, Clone)]
+pub struct MaskedQuestion {
+    /// The masking character (default: '*').
+    pub mask: Option<char>,
+
+    /// Validation function to call on each keystroke.
+    pub validate_on_key: Option<String>,
+
+    /// Validation function to call on submission.
+    pub validate_on_submit: Option<String>,
+}
+
+/// Configuration for an integer input question.
+#[derive(Debug, Clone)]
+pub struct IntQuestion {
+    /// Optional default value
+    pub default: Option<i64>,
+
+    /// Optional minimum value
+    pub min: Option<i64>,
+
+    /// Optional maximum value
+    pub max: Option<i64>,
+
+    /// Validation function to call on each keystroke.
+    pub validate_on_key: Option<String>,
+
+    /// Validation function to call on submission.
+    pub validate_on_submit: Option<String>,
+}
+
+/// Configuration for a floating-point input question.
+#[derive(Debug, Clone)]
+pub struct FloatQuestion {
+    /// Optional default value.
+    pub default: Option<f64>,
+
+    /// Optional minimum value
+    pub min: Option<f64>,
+
+    /// Optional maximum value
+    pub max: Option<f64>,
+
+    /// Validation function to call on each keystroke.
+    pub validate_on_key: Option<String>,
+
+    /// Validation function to call on submission.
+    pub validate_on_submit: Option<String>,
+}
+
+/// Configuration for a yes/no confirmation question.
+#[derive(Debug, Clone)]
+pub struct ConfirmQuestion {
+    /// Default value (true for yes, false for no)
+    pub default: bool,
 }

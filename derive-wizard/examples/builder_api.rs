@@ -27,7 +27,7 @@ fn main() {
     {
         println!("Example 2: Using dialoguer backend");
         let backend = derive_wizard::DialoguerBackend::new();
-        let config2 = ServerConfig::builder().with_backend(backend).build();
+        let config2 = ServerConfig::wizard_builder().with_backend(backend).build();
         println!("Config: {:#?}\n", config2);
     }
 

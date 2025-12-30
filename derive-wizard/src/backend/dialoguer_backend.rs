@@ -1,7 +1,6 @@
 #[cfg(feature = "dialoguer-backend")]
 use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend};
-use crate::interview::{Interview, Section};
-use crate::question::{Question, QuestionKind};
+use crate::interview::{Interview, Question, QuestionKind};
 
 /// dialoguer-based interview backend
 pub struct DialoguerBackend;
@@ -9,46 +8,6 @@ pub struct DialoguerBackend;
 impl DialoguerBackend {
     pub fn new() -> Self {
         Self
-    }
-
-    fn execute_section(
-        &self,
-        section: &Section,
-        answers: &mut Answers,
-    ) -> Result<(), BackendError> {
-        use Section;
-
-        match section {
-            Section::Empty => Ok(()),
-            Section::Sequence(seq) => {
-                for question in &seq.sequence {
-                    self.execute_question(question, answers)?;
-                }
-                Ok(())
-            }
-            Section::Alternatives(default_idx, alternatives) => {
-                let choices: Vec<&str> = alternatives.iter().map(|alt| alt.name.as_str()).collect();
-
-                let selection = dialoguer::Select::new()
-                    .with_prompt("Select an option")
-                    .items(&choices)
-                    .default(*default_idx)
-                    .interact()
-                    .map_err(|e| {
-                        BackendError::ExecutionError(format!("Failed to prompt: {}", e))
-                    })?;
-
-                // Store the selected alternative name
-                answers.insert(
-                    "selected_alternative".to_string(),
-                    AnswerValue::String(alternatives[selection].name.clone()),
-                );
-
-                // Execute the follow-up section for the selected alternative
-                self.execute_section(&alternatives[selection].section, answers)?;
-                Ok(())
-            }
-        }
     }
 
     fn execute_question(
@@ -62,8 +21,8 @@ impl DialoguerBackend {
             QuestionKind::Input(input_q) => {
                 let mut input = dialoguer::Input::<String>::new().with_prompt(question.prompt());
 
-                if let Some(default) = &input_q.default {
-                    input = input.default(default.clone());
+                if let Some(ref default) = input_q.default {
+                    input = input.default(default.to_string());
                 }
 
                 let answer = input.interact_text().map_err(|e| {
@@ -169,10 +128,40 @@ impl DialoguerBackend {
 
                 answers.insert(id.to_string(), AnswerValue::Bool(answer));
             }
-            QuestionKind::Nested(_) => {
-                return Err(BackendError::ExecutionError(
-                    "Nested questions should be inlined".into(),
-                ));
+            QuestionKind::Sequence(questions) => {
+                for q in questions {
+                    self.execute_question(q, answers)?;
+                }
+            }
+            QuestionKind::Alternative(default_idx, alternatives) => {
+                // Build the select question for alternatives
+                let choices: Vec<String> = alternatives
+                    .iter()
+                    .map(|alt| alt.name().to_string())
+                    .collect();
+                let choice_refs: Vec<&str> = choices.iter().map(|s| s.as_str()).collect();
+
+                let selection = dialoguer::Select::new()
+                    .with_prompt(question.prompt())
+                    .items(&choice_refs)
+                    .default(*default_idx)
+                    .interact()
+                    .map_err(|e| {
+                        BackendError::ExecutionError(format!("Failed to prompt: {}", e))
+                    })?;
+
+                // Store the selected alternative name
+                answers.insert(
+                    "selected_alternative".to_string(),
+                    AnswerValue::String(choices[selection].clone()),
+                );
+
+                // Execute the selected alternative's questions
+                if let QuestionKind::Alternative(_, alts) = alternatives[selection].kind() {
+                    for q in alts {
+                        self.execute_question(q, answers)?;
+                    }
+                }
             }
         }
 
@@ -190,8 +179,8 @@ impl InterviewBackend for DialoguerBackend {
     fn execute(&self, interview: &Interview) -> Result<Answers, BackendError> {
         let mut answers = Answers::new();
 
-        for section in &interview.sections {
-            self.execute_section(section, &mut answers)?;
+        for question in &interview.sections {
+            self.execute_question(question, &mut answers)?;
         }
 
         Ok(answers)

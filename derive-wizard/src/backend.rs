@@ -1,7 +1,4 @@
-use crate::{
-    AnswerError, AnswerValue, Answers,
-    interview::{Interview, Section},
-};
+use crate::{AnswerError, AnswerValue, Answers, interview::Interview};
 
 #[cfg(feature = "requestty-backend")]
 pub mod requestty_backend;
@@ -34,15 +31,6 @@ pub enum BackendError {
 pub trait InterviewBackend {
     /// Execute an interview and return the collected answers
     fn execute(&self, interview: &Interview) -> Result<Answers, BackendError>;
-
-    /// Execute a single section (optional, has default implementation)
-    fn execute_section(&self, section: &Section) -> Result<Answers, BackendError> {
-        // Default implementation - subclasses can override
-        let _ = section;
-        Err(BackendError::Custom(
-            "execute_section not implemented".to_string(),
-        ))
-    }
 }
 
 /// Test backend that returns predefined answers

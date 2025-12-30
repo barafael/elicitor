@@ -3,10 +3,9 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{Data, Fields, Lit, Meta, Type, parse_macro_input};
 
-use derive_wizard_types::interview::{Alternative, Interview, Section, Sequence};
-use derive_wizard_types::question::{
-    ConfirmQuestion, FloatQuestion, InputQuestion, IntQuestion, MaskedQuestion, MultilineQuestion,
-    NestedQuestion, Question, QuestionKind,
+use derive_wizard_types::interview::{
+    ConfirmQuestion, FloatQuestion, InputQuestion, IntQuestion, Interview, MaskedQuestion,
+    MultilineQuestion, Question, QuestionKind,
 };
 
 #[proc_macro_derive(
@@ -68,14 +67,11 @@ fn build_interview(input: &syn::DeriveInput) -> Interview {
     let sections = match &input.data {
         Data::Struct(data) => {
             if let Fields::Named(fields) = &data.fields {
-                let questions = fields
+                fields
                     .named
                     .iter()
                     .map(|f| build_question(f, None))
-                    .collect();
-                vec![Section::Sequence(Sequence {
-                    sequence: questions,
-                })]
+                    .collect()
             } else {
                 vec![]
             }
@@ -85,37 +81,34 @@ fn build_interview(input: &syn::DeriveInput) -> Interview {
                 .variants
                 .iter()
                 .map(|variant| {
-                    let section = match &variant.fields {
-                        Fields::Unit => Section::Empty,
-                        Fields::Unnamed(fields) => {
-                            let questions = fields
-                                .unnamed
-                                .iter()
-                                .enumerate()
-                                .map(|(i, f)| build_question(f, Some(i)))
-                                .collect();
-                            Section::Sequence(Sequence {
-                                sequence: questions,
-                            })
-                        }
-                        Fields::Named(fields) => {
-                            let questions = fields
-                                .named
-                                .iter()
-                                .map(|f| build_question(f, None))
-                                .collect();
-                            Section::Sequence(Sequence {
-                                sequence: questions,
-                            })
-                        }
+                    let questions = match &variant.fields {
+                        Fields::Unit => vec![],
+                        Fields::Unnamed(fields) => fields
+                            .unnamed
+                            .iter()
+                            .enumerate()
+                            .map(|(i, f)| build_question(f, Some(i)))
+                            .collect(),
+                        Fields::Named(fields) => fields
+                            .named
+                            .iter()
+                            .map(|f| build_question(f, None))
+                            .collect(),
                     };
-                    Alternative {
-                        name: variant.ident.to_string(),
-                        section,
-                    }
+                    Question::new(
+                        Some(variant.ident.to_string()),
+                        variant.ident.to_string(),
+                        variant.ident.to_string(),
+                        QuestionKind::Alternative(0, questions),
+                    )
                 })
                 .collect();
-            vec![Section::Alternatives(0, alternatives)]
+            vec![Question::new(
+                Some("alternatives".to_string()),
+                "alternatives".to_string(),
+                "Select variant:".to_string(),
+                QuestionKind::Sequence(alternatives),
+            )]
         }
         Data::Union(_) => vec![],
     };
@@ -209,9 +202,15 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
             validate_on_key: attrs.validate_on_key.clone(),
             validate_on_submit: attrs.validate_on_submit.clone(),
         }),
-        type_path => QuestionKind::Nested(NestedQuestion {
-            type_path: type_path.to_string(),
-        }),
+        _type_path => {
+            // For nested types, we'll need to handle them at the interview generation level
+            // For now, default to Input for unknown types
+            QuestionKind::Input(InputQuestion {
+                default: None,
+                validate_on_key: attrs.validate_on_key.clone(),
+                validate_on_submit: attrs.validate_on_submit.clone(),
+            })
+        }
     }
 }
 
@@ -307,92 +306,10 @@ fn extract_float_attr(attrs: &[syn::Attribute], name: &str) -> Option<f64> {
 }
 
 fn generate_interview_code(interview: &Interview) -> proc_macro2::TokenStream {
-    let has_nested = interview.sections.iter().any(|section| {
-        matches!(section, Section::Sequence(seq) if seq.sequence.iter()
-            .any(|q| matches!(q.kind(), QuestionKind::Nested(_))))
-    });
-
-    if !has_nested {
-        let sections = interview.sections.iter().map(generate_section_code);
-        return quote! {
-            derive_wizard::interview::Interview {
-                sections: vec![#(#sections),*],
-            }
-        };
-    }
-
-    // Handle nested types dynamically
-    let mut builders = Vec::new();
-    for section in &interview.sections {
-        if let Section::Sequence(seq) = section {
-            let mut batch = Vec::new();
-
-            for question in &seq.sequence {
-                if let QuestionKind::Nested(nested) = question.kind() {
-                    if !batch.is_empty() {
-                        let questions = batch.iter().map(generate_question_code);
-                        builders.push(quote! {
-                            sections.push(derive_wizard::interview::Section::Sequence(
-                                derive_wizard::interview::Sequence { sequence: vec![#(#questions),*] }
-                            ));
-                        });
-                        batch.clear();
-                    }
-                    let type_ident = syn::parse_str::<syn::Ident>(&nested.type_path).unwrap();
-                    builders.push(quote! {
-                        sections.extend(#type_ident::interview().sections);
-                    });
-                } else {
-                    batch.push(question.clone());
-                }
-            }
-
-            if !batch.is_empty() {
-                let questions = batch.iter().map(generate_question_code);
-                builders.push(quote! {
-                    sections.push(derive_wizard::interview::Section::Sequence(
-                        derive_wizard::interview::Sequence { sequence: vec![#(#questions),*] }
-                    ));
-                });
-            }
-        } else {
-            let section_code = generate_section_code(section);
-            builders.push(quote! { sections.push(#section_code); });
-        }
-    }
-
-    quote! {{
-        let mut sections = Vec::new();
-        #(#builders)*
-        derive_wizard::interview::Interview { sections }
-    }}
-}
-
-fn generate_section_code(section: &Section) -> proc_macro2::TokenStream {
-    match section {
-        Section::Empty => quote! { derive_wizard::interview::Section::Empty },
-        Section::Sequence(seq) => {
-            let questions = seq.sequence.iter().map(generate_question_code);
-            quote! {
-                derive_wizard::interview::Section::Sequence(
-                    derive_wizard::interview::Sequence { sequence: vec![#(#questions),*] }
-                )
-            }
-        }
-        Section::Alternatives(idx, alts) => {
-            let alternatives = alts.iter().map(|alt| {
-                let name = &alt.name;
-                let section = generate_section_code(&alt.section);
-                quote! {
-                    derive_wizard::interview::Alternative {
-                        name: #name.to_string(),
-                        section: #section,
-                    }
-                }
-            });
-            quote! {
-                derive_wizard::interview::Section::Alternatives(#idx, vec![#(#alternatives),*])
-            }
+    let sections = interview.sections.iter().map(generate_question_code);
+    quote! {
+        derive_wizard::interview::Interview {
+            sections: vec![#(#sections),*],
         }
     }
 }
@@ -413,7 +330,7 @@ fn generate_question_code_impl(
     let kind = generate_question_kind_code_impl(question.kind(), default_value);
 
     quote! {
-        derive_wizard::question::Question::new(#id, #name.to_string(), #prompt.to_string(), #kind)
+        derive_wizard::interview::Question::new(#id, #name.to_string(), #prompt.to_string(), #kind)
     }
 }
 
@@ -437,7 +354,7 @@ fn generate_question_kind_code_impl(
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
-                derive_wizard::question::QuestionKind::Input(derive_wizard::question::InputQuestion {
+                derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
                     default: #default,
                     validate_on_key: #validate_on_key,
                     validate_on_submit: #validate_on_submit,
@@ -450,7 +367,7 @@ fn generate_question_kind_code_impl(
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
-                derive_wizard::question::QuestionKind::Multiline(derive_wizard::question::MultilineQuestion {
+                derive_wizard::interview::QuestionKind::Multiline(derive_wizard::interview::MultilineQuestion {
                     default: #default,
                     validate_on_key: #validate_on_key,
                     validate_on_submit: #validate_on_submit,
@@ -462,7 +379,7 @@ fn generate_question_kind_code_impl(
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
-                derive_wizard::question::QuestionKind::Masked(derive_wizard::question::MaskedQuestion {
+                derive_wizard::interview::QuestionKind::Masked(derive_wizard::interview::MaskedQuestion {
                     mask: #mask,
                     validate_on_key: #validate_on_key,
                     validate_on_submit: #validate_on_submit,
@@ -482,7 +399,7 @@ fn generate_question_kind_code_impl(
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
-                derive_wizard::question::QuestionKind::Int(derive_wizard::question::IntQuestion {
+                derive_wizard::interview::QuestionKind::Int(derive_wizard::interview::IntQuestion {
                     default: #default,
                     min: #min,
                     max: #max,
@@ -504,7 +421,7 @@ fn generate_question_kind_code_impl(
             let validate_on_key = opt_str!(&q.validate_on_key);
             let validate_on_submit = opt_str!(&q.validate_on_submit);
             quote! {
-                derive_wizard::question::QuestionKind::Float(derive_wizard::question::FloatQuestion {
+                derive_wizard::interview::QuestionKind::Float(derive_wizard::interview::FloatQuestion {
                     default: #default,
                     min: #min,
                     max: #max,
@@ -519,17 +436,21 @@ fn generate_question_kind_code_impl(
                 quote! { #d }
             });
             quote! {
-                derive_wizard::question::QuestionKind::Confirm(derive_wizard::question::ConfirmQuestion {
+                derive_wizard::interview::QuestionKind::Confirm(derive_wizard::interview::ConfirmQuestion {
                     default: #default,
                 })
             }
         }
-        QuestionKind::Nested(q) => {
-            let type_path = &q.type_path;
+        QuestionKind::Sequence(questions) => {
+            let question_codes = questions.iter().map(generate_question_code);
             quote! {
-                derive_wizard::question::QuestionKind::Nested(derive_wizard::question::NestedQuestion {
-                    type_path: #type_path.to_string(),
-                })
+                derive_wizard::interview::QuestionKind::Sequence(vec![#(#question_codes),*])
+            }
+        }
+        QuestionKind::Alternative(idx, questions) => {
+            let question_codes = questions.iter().map(generate_question_code);
+            quote! {
+                derive_wizard::interview::QuestionKind::Alternative(#idx, vec![#(#question_codes),*])
             }
         }
     }
@@ -623,11 +544,6 @@ fn generate_interview_with_defaults_struct(
         return quote! { Self::interview() };
     };
 
-    // Get the questions from the base interview
-    let Section::Sequence(seq) = &base_interview.sections[0] else {
-        return quote! { Self::interview() };
-    };
-
     let default_setters: Vec<_> = fields
         .named
         .iter()
@@ -635,30 +551,30 @@ fn generate_interview_with_defaults_struct(
         .filter_map(|(i, field)| {
             let field_name = field.ident.as_ref().unwrap();
             let field_type = &field.ty;
-            let question = &seq.sequence[i];
+            let question = &base_interview.sections[i];
 
             // Generate the default value based on field type
             match question.kind() {
                 QuestionKind::Input(_) => match quote!(#field_type).to_string().as_str() {
                     "String" => Some(quote! {
-                        seq.sequence[#i].set_default(self.#field_name.clone());
+                        interview.sections[#i].set_default(self.#field_name.clone());
                     }),
                     "PathBuf" => Some(quote! {
-                        seq.sequence[#i].set_default(self.#field_name.display().to_string());
+                        interview.sections[#i].set_default(self.#field_name.display().to_string());
                     }),
                     _ => None,
                 },
                 QuestionKind::Multiline(_) => Some(quote! {
-                    seq.sequence[#i].set_default(self.#field_name.clone());
+                    interview.sections[#i].set_default(self.#field_name.clone());
                 }),
                 QuestionKind::Int(_) => Some(quote! {
-                    seq.sequence[#i].set_default(self.#field_name as i64);
+                    interview.sections[#i].set_default(self.#field_name as i64);
                 }),
                 QuestionKind::Float(_) => Some(quote! {
-                    seq.sequence[#i].set_default(self.#field_name as f64);
+                    interview.sections[#i].set_default(self.#field_name as f64);
                 }),
                 QuestionKind::Confirm(_) => Some(quote! {
-                    seq.sequence[#i].set_default(self.#field_name);
+                    interview.sections[#i].set_default(self.#field_name);
                 }),
                 _ => None,
             }
@@ -667,9 +583,7 @@ fn generate_interview_with_defaults_struct(
 
     quote! {{
         let mut interview = Self::interview();
-        if let Some(derive_wizard::interview::Section::Sequence(seq)) = interview.sections.get_mut(0) {
-            #(#default_setters)*
-        }
+        #(#default_setters)*
         interview
     }}
 }
