@@ -176,7 +176,7 @@ fn test_builder_pattern_chaining() {
 
     assert_eq!(result.name, "Dave");
     assert_eq!(result.age, 25);
-    assert_eq!(result.active, false);
+    assert!(!result.active);
 }
 
 #[test]
@@ -212,16 +212,16 @@ struct NumericTypes {
 fn test_multiple_numeric_types() {
     let backend = TestBackend::new()
         .with_int("int_val", 100)
-        .with_float("float_val", 3.14159)
+        .with_float("float_val", 3.15)
         .with_int("small_int", 42)
-        .with_float("small_float", 2.718);
+        .with_float("small_float", 2.72);
 
     let result = NumericTypes::wizard_builder().with_backend(backend).build();
 
     assert_eq!(result.int_val, 100);
-    assert_eq!(result.float_val, 3.14159);
+    assert_eq!(result.float_val, 3.15);
     assert_eq!(result.small_int, 42);
-    assert!((result.small_float - 2.718).abs() < 0.001);
+    assert!((result.small_float - 2.72).abs() < 0.001);
 }
 
 #[derive(Debug, PartialEq, Wizard)]
