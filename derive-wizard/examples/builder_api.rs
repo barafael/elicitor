@@ -31,15 +31,15 @@ fn main() {
         println!("Config: {:#?}\n", config2);
     }
 
-    // Example 3: Builder with defaults
-    println!("Example 3: Using defaults (re-prompting with existing values)");
-    let defaults = ServerConfig {
+    // Example 3: Builder with suggestions
+    println!("Example 3: Using suggestions (re-prompting with existing values)");
+    let suggestions = ServerConfig {
         host: "localhost".to_string(),
         port: 8080,
         ssl: true,
     };
     let config3 = ServerConfig::wizard_builder()
-        .with_defaults(defaults)
+        .with_suggestions(suggestions)
         .build();
     println!("Config: {:#?}\n", config3);
 }

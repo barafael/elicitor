@@ -26,7 +26,7 @@ name = "egui_demo"
 required-features = ["egui-backend"]
 
 [[example]]
-name = "egui_defaults_demo"
+name = "egui_suggestions_demo"
 required-features = ["egui-backend"]
 
 [[example]]
@@ -34,7 +34,7 @@ name = "dialoguer_demo"
 required-features = ["dialoguer-backend"]
 
 [[example]]
-name = "dialoguer_defaults_demo"
+name = "dialoguer_suggestions_demo"
 required-features = ["dialoguer-backend"]
 
 [[example]]

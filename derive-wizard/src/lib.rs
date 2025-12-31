@@ -21,8 +21,8 @@ pub trait Wizard: Sized {
     /// Get the interview structure for this type
     fn interview() -> interview::Interview;
 
-    /// Get the interview structure with default values from this instance
-    fn interview_with_defaults(&self) -> interview::Interview;
+    /// Get the interview structure with suggested values from this instance
+    fn interview_with_suggestions(&self) -> interview::Interview;
 
     /// Build this type from collected answers
     fn from_answers(answers: &Answers) -> Result<Self, BackendError>;
@@ -36,7 +36,7 @@ pub trait Wizard: Sized {
 /// Builder for configuring and executing a wizard
 #[derive(Default)]
 pub struct WizardBuilder<T: Wizard> {
-    defaults: Option<T>,
+    suggestions: Option<T>,
     backend: Option<Box<dyn InterviewBackend>>,
 }
 
@@ -44,14 +44,14 @@ impl<T: Wizard> WizardBuilder<T> {
     /// Create a new wizard builder
     pub fn new() -> Self {
         Self {
-            defaults: None,
+            suggestions: None,
             backend: None,
         }
     }
 
-    /// Set default values for the wizard
-    pub fn with_defaults(mut self, defaults: T) -> Self {
-        self.defaults = Some(defaults);
+    /// Set suggested values for the wizard
+    pub fn with_suggestions(mut self, suggestions: T) -> Self {
+        self.suggestions = Some(suggestions);
         self
     }
 
@@ -69,9 +69,11 @@ impl<T: Wizard> WizardBuilder<T> {
         let backend = self.backend.unwrap_or_else(|| Box::new(RequesttyBackend));
 
         let interview = self
-            .defaults
+            .suggestions
             .as_ref()
-            .map_or_else(T::interview, |defaults| defaults.interview_with_defaults());
+            .map_or_else(T::interview, |suggestions| {
+                suggestions.interview_with_suggestions()
+            });
 
         let answers = backend
             .execute(&interview)
@@ -86,8 +88,8 @@ impl<T: Wizard> WizardBuilder<T> {
             .backend
             .expect("No backend specified and requestty-backend feature is not enabled");
 
-        let interview = if let Some(ref defaults) = self.defaults {
-            defaults.interview_with_defaults()
+        let interview = if let Some(ref suggestions) = self.suggestions {
+            suggestions.interview_with_suggestions()
         } else {
             T::interview()
         };

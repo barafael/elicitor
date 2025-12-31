@@ -1,31 +1,31 @@
-/// Represents a default value that can be set on a question.
-pub enum QuestionDefault {
+/// Represents a suggested value that can be set on a question.
+pub enum SuggestedAnswer {
     String(String),
     Int(i64),
     Float(f64),
     Bool(bool),
 }
 
-impl From<String> for QuestionDefault {
+impl From<String> for SuggestedAnswer {
     fn from(v: String) -> Self {
-        QuestionDefault::String(v)
+        SuggestedAnswer::String(v)
     }
 }
 
-impl From<i64> for QuestionDefault {
+impl From<i64> for SuggestedAnswer {
     fn from(v: i64) -> Self {
-        QuestionDefault::Int(v)
+        SuggestedAnswer::Int(v)
     }
 }
 
-impl From<f64> for QuestionDefault {
+impl From<f64> for SuggestedAnswer {
     fn from(v: f64) -> Self {
-        QuestionDefault::Float(v)
+        SuggestedAnswer::Float(v)
     }
 }
 
-impl From<bool> for QuestionDefault {
+impl From<bool> for SuggestedAnswer {
     fn from(v: bool) -> Self {
-        QuestionDefault::Bool(v)
+        SuggestedAnswer::Bool(v)
     }
 }

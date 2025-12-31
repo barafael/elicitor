@@ -123,9 +123,9 @@ struct Config {
 let config = Config::wizard_builder().build();
 println!("Config: {config:#?}");
 
-// Edit configuration with defaults pre-filled
+// Edit configuration with suggestions pre-filled
 let updated_config = Config::wizard_builder()
-    .with_defaults(config)
+    .with_suggestions(config)
     .build();
 println!("Updated config: {updated_config:#?}");
 ```
@@ -151,21 +151,21 @@ let config = Config::wizard_builder()
     .build();
 println!("Config: {config:#?}");
 
-// Combine defaults with custom backend
+// Combine suggestions with custom backend
 let backend = derive_wizard::RequesttyBackend::new();
 let updated_config = Config::wizard_builder()
-    .with_defaults(config)
+    .with_suggestions(config)
     .with_backend(backend)
     .build();
 println!("Updated config: {updated_config:#?}");
 ```
 
-When `with_defaults()` is used:
+When `with_suggestions()` is used:
 
 - For **String** fields: the current value is shown as a hint/placeholder
-- For **numeric** fields (integers and floats): the current value is shown as default
+- For **numeric** fields (integers and floats): the current value is shown as suggested
 - For **bool** fields: the current value is pre-selected
-- For **password** (`#[mask]`) and **editor** (`#[editor]`) fields: defaults are shown as hints (backend-dependent)
+- For **password** (`#[mask]`) and **editor** (`#[editor]`) fields: suggestions are shown as hints (backend-dependent)
 
 ## Supported Question Types
 

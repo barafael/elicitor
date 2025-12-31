@@ -49,11 +49,11 @@ fn main() {
         println!("Profile: {:#?}\n", profile3);
     }
 
-    // Example 4: With defaults (will be prompted with these as starting values)
+    // Example 4: With suggestions (will be prompted with these as starting values)
     #[cfg(feature = "requestty-backend")]
     {
-        println!("--- Example 4: Builder with Default Values ---");
-        let defaults = UserProfile {
+        println!("--- Example 4: Builder with Suggested Values ---");
+        let suggestions = UserProfile {
             name: "John Doe".to_string(),
             age: 30,
             email: "john@example.com".to_string(),
@@ -61,16 +61,16 @@ fn main() {
         };
 
         let profile4 = UserProfile::wizard_builder()
-            .with_defaults(defaults)
+            .with_suggestions(suggestions)
             .build();
         println!("Profile: {:#?}\n", profile4);
     }
 
-    // Example 5: Combining defaults with custom backend
+    // Example 5: Combining suggestions with custom backend
     #[cfg(all(feature = "requestty-backend", feature = "dialoguer-backend"))]
     {
-        println!("--- Example 5: Builder with Defaults AND Custom Backend ---");
-        let defaults = UserProfile {
+        println!("--- Example 5: Builder with Suggestions AND Custom Backend ---");
+        let suggestions = UserProfile {
             name: "Jane Smith".to_string(),
             age: 25,
             email: "jane@example.com".to_string(),
@@ -80,7 +80,7 @@ fn main() {
         let backend = derive_wizard::DialoguerBackend::new();
 
         let profile5 = UserProfile::wizard_builder()
-            .with_defaults(defaults)
+            .with_suggestions(suggestions)
             .with_backend(backend)
             .build();
         println!("Profile: {:#?}\n", profile5);

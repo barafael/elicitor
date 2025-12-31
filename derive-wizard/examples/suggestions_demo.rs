@@ -19,7 +19,9 @@ fn main() {
     println!("Created profile: {profile:#?}\n");
 
     println!("=== Editing the existing profile ===");
-    println!("The current values will be pre-filled as defaults.");
-    let updated_profile = UserProfile::wizard_builder().with_defaults(profile).build();
+    println!("The current values will be pre-filled as suggestions.");
+    let updated_profile = UserProfile::wizard_builder()
+        .with_suggestions(profile)
+        .build();
     println!("Updated profile: {updated_profile:#?}");
 }

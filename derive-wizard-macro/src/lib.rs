@@ -37,10 +37,10 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!(),
     };
 
-    let interview_with_defaults_code = match &input.data {
-        Data::Struct(data) => generate_interview_with_defaults_struct(data, &interview),
+    let interview_with_suggestions_code = match &input.data {
+        Data::Struct(data) => generate_interview_with_suggestions_struct(data, &interview),
         Data::Enum(_data) => {
-            // For enums, we can't easily provide defaults, so just return the base interview
+            // For enums, we can't easily provide suggestions, so just return the base interview
             quote! { Self::interview() }
         }
         Data::Union(_) => unimplemented!(),
@@ -52,8 +52,8 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
                 #interview_code
             }
 
-            fn interview_with_defaults(&self) -> derive_wizard::interview::Interview {
-                #interview_with_defaults_code
+            fn interview_with_suggestions(&self) -> derive_wizard::interview::Interview {
+                #interview_with_suggestions_code
             }
 
             fn from_answers(answers: &derive_wizard::Answers) -> Result<Self, derive_wizard::backend::BackendError> {
@@ -536,7 +536,7 @@ fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::Token
     }
 }
 
-fn generate_interview_with_defaults_struct(
+fn generate_interview_with_suggestions_struct(
     data: &syn::DataStruct,
     base_interview: &Interview,
 ) -> proc_macro2::TokenStream {
@@ -544,7 +544,7 @@ fn generate_interview_with_defaults_struct(
         return quote! { Self::interview() };
     };
 
-    let default_setters: Vec<_> = fields
+    let suggestion_setters: Vec<_> = fields
         .named
         .iter()
         .enumerate()
@@ -553,28 +553,28 @@ fn generate_interview_with_defaults_struct(
             let field_type = &field.ty;
             let question = &base_interview.sections[i];
 
-            // Generate the default value based on field type
+            // Generate the suggested value based on field type
             match question.kind() {
                 QuestionKind::Input(_) => match quote!(#field_type).to_string().as_str() {
                     "String" => Some(quote! {
-                        interview.sections[#i].set_default(self.#field_name.clone());
+                        interview.sections[#i].set_suggestion(self.#field_name.clone());
                     }),
                     "PathBuf" => Some(quote! {
-                        interview.sections[#i].set_default(self.#field_name.display().to_string());
+                        interview.sections[#i].set_suggestion(self.#field_name.display().to_string());
                     }),
                     _ => None,
                 },
                 QuestionKind::Multiline(_) => Some(quote! {
-                    interview.sections[#i].set_default(self.#field_name.clone());
+                    interview.sections[#i].set_suggestion(self.#field_name.clone());
                 }),
                 QuestionKind::Int(_) => Some(quote! {
-                    interview.sections[#i].set_default(self.#field_name as i64);
+                    interview.sections[#i].set_suggestion(self.#field_name as i64);
                 }),
                 QuestionKind::Float(_) => Some(quote! {
-                    interview.sections[#i].set_default(self.#field_name as f64);
+                    interview.sections[#i].set_suggestion(self.#field_name as f64);
                 }),
                 QuestionKind::Confirm(_) => Some(quote! {
-                    interview.sections[#i].set_default(self.#field_name);
+                    interview.sections[#i].set_suggestion(self.#field_name);
                 }),
                 _ => None,
             }
@@ -583,7 +583,7 @@ fn generate_interview_with_defaults_struct(
 
     quote! {{
         let mut interview = Self::interview();
-        #(#default_setters)*
+        #(#suggestion_setters)*
         interview
     }}
 }

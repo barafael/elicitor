@@ -1,4 +1,4 @@
-use crate::default::QuestionDefault;
+use crate::default::SuggestedAnswer;
 
 /// A sequence of sections, which contain questions.
 #[derive(Debug, Clone)]
@@ -47,22 +47,22 @@ impl Question {
         &self.kind
     }
 
-    /// Set the default value for this question based on its kind.
-    pub fn set_default(&mut self, value: impl Into<QuestionDefault>) {
+    /// Set the suggested value for this question based on its kind.
+    pub fn set_suggestion(&mut self, value: impl Into<SuggestedAnswer>) {
         match (&mut self.kind, value.into()) {
-            (QuestionKind::Input(q), QuestionDefault::String(v)) => {
+            (QuestionKind::Input(q), SuggestedAnswer::String(v)) => {
                 q.default = Some(v);
             }
-            (QuestionKind::Multiline(q), QuestionDefault::String(v)) => {
+            (QuestionKind::Multiline(q), SuggestedAnswer::String(v)) => {
                 q.default = Some(v);
             }
-            (QuestionKind::Int(q), QuestionDefault::Int(v)) => {
+            (QuestionKind::Int(q), SuggestedAnswer::Int(v)) => {
                 q.default = Some(v);
             }
-            (QuestionKind::Float(q), QuestionDefault::Float(v)) => {
+            (QuestionKind::Float(q), SuggestedAnswer::Float(v)) => {
                 q.default = Some(v);
             }
-            (QuestionKind::Confirm(q), QuestionDefault::Bool(v)) => {
+            (QuestionKind::Confirm(q), SuggestedAnswer::Bool(v)) => {
                 q.default = v;
             }
             _ => {}

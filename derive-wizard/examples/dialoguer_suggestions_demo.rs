@@ -1,8 +1,8 @@
 use derive_wizard::Wizard;
 
-/// This example demonstrates how defaults work in the dialoguer backend.
-/// The dialoguer backend shows default values in square brackets [default].
-/// Simply press Enter to accept the default value.
+/// This example demonstrates how suggestions work in the dialoguer backend.
+/// The dialoguer backend shows suggested values in square brackets [default].
+/// Simply press Enter to accept the suggested value.
 #[derive(Debug, Clone, Wizard)]
 struct AppSettings {
     #[prompt("Application name:")]
@@ -31,10 +31,10 @@ struct AppSettings {
 }
 
 fn main() {
-    println!("=== Application Settings - dialoguer Defaults Demo ===\n");
-    println!("This demo showcases how dialoguer displays default values.");
-    println!("Default values appear in [square brackets].");
-    println!("Press Enter to accept a default, or type a new value.\n");
+    println!("=== Application Settings - dialoguer Suggestions Demo ===\n");
+    println!("This demo showcases how dialoguer displays suggested values.");
+    println!("Suggested values appear in [square brackets].");
+    println!("Press Enter to accept a suggestion, or type a new value.\n");
 
     // Create initial settings with builder API
     let backend = derive_wizard::DialoguerBackend::new();
@@ -44,12 +44,12 @@ fn main() {
     println!("\n=== Settings Created ===");
     println!("{:#?}\n", settings);
 
-    // Edit existing settings with defaults using builder API
+    // Edit existing settings with suggestions using builder API
     println!("--- Second Run: Edit Existing Settings ---");
-    println!("The current values will be shown as defaults.\n");
+    println!("The current values will be shown as suggestions.\n");
     let backend = derive_wizard::DialoguerBackend::new();
     let updated_settings = AppSettings::wizard_builder()
-        .with_defaults(settings)
+        .with_suggestions(settings)
         .with_backend(backend)
         .build();
 
