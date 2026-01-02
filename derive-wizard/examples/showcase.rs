@@ -51,6 +51,30 @@ enum Gender {
 }
 
 fn main() {
-    let magic = ShowCase::wizard_builder().build();
-    println!("Config: {magic:#?}");
+    println!("=== Derive Wizard Showcase ===");
+    println!("Demonstrating all major field types and attributes");
+    println!();
+
+    #[cfg(feature = "egui-backend")]
+    {
+        println!("Using egui GUI backend");
+        let backend = derive_wizard::EguiBackend::new()
+            .with_title("Derive Wizard Showcase")
+            .with_window_size([600.0, 700.0]);
+
+        let magic = ShowCase::wizard_builder().with_backend(backend).build();
+        println!("=== Configuration Created ===");
+        println!("{magic:#?}");
+    }
+
+    #[cfg(not(feature = "egui-backend"))]
+    {
+        println!("Using default (requestty) backend");
+        println!("Run with --features egui-backend to use the GUI version");
+        println!();
+
+        let magic = ShowCase::wizard_builder().build();
+        println!("=== Configuration Created ===");
+        println!("{magic:#?}");
+    }
 }

@@ -117,9 +117,7 @@ impl InterviewState {
     }
 
     fn get_or_init_buffer(&mut self, key: &str) -> &mut String {
-        self.input_buffers
-            .entry(key.to_string())
-            .or_default()
+        self.input_buffers.entry(key.to_string()).or_default()
     }
 }
 
@@ -172,11 +170,12 @@ impl EguiWizardApp {
                 // Submit button at the bottom
                 if ui.button("Submit").clicked()
                     && let Some(answers) = self.validate_and_collect()
-                        && let Some(tx) = self.result_sender.take() {
-                            let _ = tx.send(Ok(answers));
-                            self.completed = true;
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
+                    && let Some(tx) = self.result_sender.take()
+                {
+                    let _ = tx.send(Ok(answers));
+                    self.completed = true;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
 
                 // Show validation errors
                 if !self.state.validation_errors.is_empty() {
@@ -198,9 +197,82 @@ impl EguiWizardApp {
     ) {
         match question.kind() {
             QuestionKind::Sequence(questions) => {
-                for (idx, q) in questions.iter().enumerate() {
-                    self.show_question_recursive(ui, q, question_idx * 1000 + idx);
-                    ui.add_space(8.0);
+                // Check if this is an enum alternatives sequence
+                let is_enum_alternatives = !questions.is_empty()
+                    && questions
+                        .iter()
+                        .all(|q| matches!(q.kind(), QuestionKind::Alternative(_, _)));
+
+                if is_enum_alternatives {
+                    // This is an enum - render as a selection
+                    let alt_key = format!("question_{}", question_idx);
+
+                    ui.label(question.prompt());
+                    ui.add_space(5.0);
+
+                    let selected = self
+                        .state
+                        .selected_alternatives
+                        .get(&alt_key)
+                        .copied()
+                        .unwrap_or(0);
+
+                    for (idx, variant) in questions.iter().enumerate() {
+                        if ui.radio(selected == idx, variant.name()).clicked() {
+                            self.state
+                                .selected_alternatives
+                                .insert(alt_key.clone(), idx);
+                        }
+                    }
+
+                    ui.add_space(10.0);
+
+                    // Show fields for the selected variant
+                    if let Some(selected_variant) = questions.get(selected)
+                        && let QuestionKind::Alternative(_, fields) = selected_variant.kind()
+                        && !fields.is_empty()
+                    {
+                        ui.group(|ui| {
+                            ui.label(format!("Details for '{}':", selected_variant.name()));
+                            ui.add_space(5.0);
+
+                            // Determine if we need to prefix field IDs
+                            let id = question.id().unwrap_or(question.name());
+                            let parent_prefix = id.strip_suffix(".alternatives");
+
+                            for (idx, field_q) in fields.iter().enumerate() {
+                                // Prefix field questions if this enum is nested in a struct
+                                if let Some(prefix) = parent_prefix {
+                                    let field_id = field_q.id().unwrap_or(field_q.name());
+                                    let prefixed_id = format!("{}.{}", prefix, field_id);
+                                    let prefixed_question = Question::new(
+                                        Some(prefixed_id.clone()),
+                                        prefixed_id,
+                                        field_q.prompt().to_string(),
+                                        field_q.kind().clone(),
+                                    );
+                                    self.show_question_recursive(
+                                        ui,
+                                        &prefixed_question,
+                                        question_idx * 1000 + selected * 100 + idx,
+                                    );
+                                } else {
+                                    self.show_question_recursive(
+                                        ui,
+                                        field_q,
+                                        question_idx * 1000 + selected * 100 + idx,
+                                    );
+                                }
+                                ui.add_space(8.0);
+                            }
+                        });
+                    }
+                } else {
+                    // Regular sequence - show all questions
+                    for (idx, q) in questions.iter().enumerate() {
+                        self.show_question_recursive(ui, q, question_idx * 1000 + idx);
+                        ui.add_space(8.0);
+                    }
                 }
             }
             QuestionKind::Alternative(default_idx, alternatives) => {
@@ -229,20 +301,21 @@ impl EguiWizardApp {
                 // Show follow-up questions for selected alternative
                 if let Some(alt) = alternatives.get(selected)
                     && let QuestionKind::Alternative(_, alts) = alt.kind()
-                        && !alts.is_empty() {
-                            ui.group(|ui| {
-                                ui.label(format!("Details for '{}':", alt.name()));
-                                ui.add_space(5.0);
-                                for (idx, q) in alts.iter().enumerate() {
-                                    self.show_question_recursive(
-                                        ui,
-                                        q,
-                                        question_idx * 1000 + selected * 100 + idx,
-                                    );
-                                    ui.add_space(8.0);
-                                }
-                            });
+                    && !alts.is_empty()
+                {
+                    ui.group(|ui| {
+                        ui.label(format!("Details for '{}':", alt.name()));
+                        ui.add_space(5.0);
+                        for (idx, q) in alts.iter().enumerate() {
+                            self.show_question_recursive(
+                                ui,
+                                q,
+                                question_idx * 1000 + selected * 100 + idx,
+                            );
+                            ui.add_space(8.0);
                         }
+                    });
+                }
             }
             _ => {
                 self.show_question(ui, question);
@@ -373,13 +446,89 @@ impl EguiWizardApp {
     ) -> bool {
         match question.kind() {
             QuestionKind::Sequence(questions) => {
-                let mut valid = true;
-                for (idx, q) in questions.iter().enumerate() {
-                    if !self.validate_question_recursive(q, question_idx * 1000 + idx, answers) {
-                        valid = false;
+                // Check if this is an enum alternatives sequence
+                let is_enum_alternatives = !questions.is_empty()
+                    && questions
+                        .iter()
+                        .all(|q| matches!(q.kind(), QuestionKind::Alternative(_, _)));
+
+                if is_enum_alternatives {
+                    // This is an enum - handle variant selection
+                    let alt_key = format!("question_{}", question_idx);
+                    let selected = self
+                        .state
+                        .selected_alternatives
+                        .get(&alt_key)
+                        .copied()
+                        .unwrap_or(0);
+
+                    if let Some(selected_variant) = questions.get(selected) {
+                        // Store the selected variant name with proper prefixing
+                        let id = question.id().unwrap_or(question.name());
+                        let parent_prefix = id.strip_suffix(".alternatives");
+
+                        let answer_key = if let Some(prefix) = parent_prefix {
+                            format!("{}.selected_alternative", prefix)
+                        } else if id == "alternatives" {
+                            "selected_alternative".to_string()
+                        } else {
+                            format!("{}.selected_alternative", id)
+                        };
+
+                        answers.insert(
+                            answer_key,
+                            AnswerValue::String(selected_variant.name().to_string()),
+                        );
+
+                        // Validate the selected variant's fields
+                        if let QuestionKind::Alternative(_, fields) = selected_variant.kind() {
+                            let mut valid = true;
+                            for (idx, field_q) in fields.iter().enumerate() {
+                                // Prefix field questions if this enum is nested in a struct
+                                if let Some(prefix) = parent_prefix {
+                                    let field_id = field_q.id().unwrap_or(field_q.name());
+                                    let prefixed_id = format!("{}.{}", prefix, field_id);
+                                    let prefixed_question = Question::new(
+                                        Some(prefixed_id.clone()),
+                                        prefixed_id,
+                                        field_q.prompt().to_string(),
+                                        field_q.kind().clone(),
+                                    );
+                                    if !self.validate_question_recursive(
+                                        &prefixed_question,
+                                        question_idx * 1000 + selected * 100 + idx,
+                                        answers,
+                                    ) {
+                                        valid = false;
+                                    }
+                                } else {
+                                    if !self.validate_question_recursive(
+                                        field_q,
+                                        question_idx * 1000 + selected * 100 + idx,
+                                        answers,
+                                    ) {
+                                        valid = false;
+                                    }
+                                }
+                            }
+                            valid
+                        } else {
+                            true
+                        }
+                    } else {
+                        true
                     }
+                } else {
+                    // Regular sequence - validate all questions
+                    let mut valid = true;
+                    for (idx, q) in questions.iter().enumerate() {
+                        if !self.validate_question_recursive(q, question_idx * 1000 + idx, answers)
+                        {
+                            valid = false;
+                        }
+                    }
+                    valid
                 }
-                valid
             }
             QuestionKind::Alternative(default_idx, alternatives) => {
                 let alt_key = format!("question_{}", question_idx);

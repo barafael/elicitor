@@ -45,6 +45,9 @@ Complex use cases:
 
 ### 📄 showcase.rs
 Comprehensive showcase demonstrating all major field types and attributes in one example.
+- Supports both requestty (default) and egui backends
+- Run with `--features egui-backend` to use the GUI version
+- Demonstrates: String, password, multiline editor, bool, i32, f32, f64, and enum fields
 
 ## Running Examples
 
@@ -70,7 +73,8 @@ cargo run --example deeply_nested
 cargo run --example nested_enum_payment
 
 # Comprehensive showcase
-cargo run --example showcase
+cargo run --example showcase                      # Uses requestty (default)
+cargo run --example showcase --features egui-backend  # Uses egui GUI
 ```
 
 ## Key Concepts
