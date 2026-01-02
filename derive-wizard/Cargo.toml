@@ -22,29 +22,92 @@ egui-backend = ["egui", "eframe"]
 dialoguer-backend = ["dialoguer"]
 
 [[example]]
-name = "egui_backend"
+name = "egui"
+path = "examples/backends/egui.rs"
 required-features = ["egui-backend"]
 
 [[example]]
-name = "egui_backend_suggestions"
+name = "egui_suggestions"
+path = "examples/backends/egui_suggestions.rs"
 required-features = ["egui-backend"]
 
 [[example]]
-name = "egui_backend_assumptions_and_suggestions"
+name = "egui_assumptions_and_suggestions"
+path = "examples/backends/egui_assumptions_and_suggestions.rs"
 required-features = ["egui-backend"]
 
 [[example]]
-name = "dialoguer_backend"
+name = "dialoguer"
+path = "examples/backends/dialoguer.rs"
 required-features = ["dialoguer-backend"]
 
 [[example]]
-name = "dialoguer_backend_suggestions"
+name = "dialoguer_suggestions"
+path = "examples/backends/dialoguer_suggestions.rs"
 required-features = ["dialoguer-backend"]
 
 [[example]]
-name = "dialoguer_backend_password"
+name = "dialoguer_password"
+path = "examples/backends/dialoguer_password.rs"
 required-features = ["dialoguer-backend"]
 
 [[example]]
 name = "builder_egui"
+path = "examples/builders/builder_egui.rs"
 required-features = ["egui-backend"]
+
+# Basic examples
+[[example]]
+name = "simple_struct"
+path = "examples/basic/simple_struct.rs"
+
+[[example]]
+name = "enum_transport"
+path = "examples/basic/enum_transport.rs"
+
+[[example]]
+name = "nested_structs"
+path = "examples/basic/nested_structs.rs"
+
+[[example]]
+name = "pathbuf"
+path = "examples/basic/pathbuf.rs"
+
+# Feature examples
+[[example]]
+name = "validation"
+path = "examples/features/validation.rs"
+
+[[example]]
+name = "password_masking"
+path = "examples/features/password_masking.rs"
+
+[[example]]
+name = "editor"
+path = "examples/features/editor.rs"
+
+[[example]]
+name = "suggestions"
+path = "examples/features/suggestions.rs"
+
+[[example]]
+name = "assumptions"
+path = "examples/features/assumptions.rs"
+
+# Builder examples
+[[example]]
+name = "builder_api"
+path = "examples/builders/builder_api.rs"
+
+[[example]]
+name = "builder_comprehensive"
+path = "examples/builders/builder_comprehensive.rs"
+
+# Advanced examples
+[[example]]
+name = "deeply_nested"
+path = "examples/advanced/deeply_nested.rs"
+
+[[example]]
+name = "nested_enum_payment"
+path = "examples/advanced/nested_enum_payment.rs"
