@@ -94,6 +94,10 @@ path = "examples/features/suggestions.rs"
 name = "assumptions"
 path = "examples/features/assumptions.rs"
 
+[[example]]
+name = "prelude_epilogue"
+path = "examples/features/prelude_epilogue.rs"
+
 # Builder examples
 [[example]]
 name = "builder_api"

@@ -263,6 +263,12 @@ impl InterviewBackend for RequesttyBackend {
     fn execute(&self, interview: &crate::interview::Interview) -> Result<Answers, BackendError> {
         use derive_wizard_types::default::AssumedAnswer;
 
+        // Display prelude if present
+        if let Some(prelude) = &interview.prelude {
+            println!("{}", prelude);
+            println!();
+        }
+
         let mut answers = Answers::new();
 
         for question in &interview.sections {
@@ -279,6 +285,12 @@ impl InterviewBackend for RequesttyBackend {
             }
 
             self.execute_question(question, &mut answers)?;
+        }
+
+        // Display epilogue if present
+        if let Some(epilogue) = &interview.epilogue {
+            println!();
+            println!("{}", epilogue);
         }
 
         Ok(answers)

@@ -9,6 +9,8 @@ enum Gender {
 }
 
 #[derive(Debug, Wizard)]
+#[prelude("This profile will be seen by other users.")]
+#[epilogue("Welcome! Have fun.")]
 #[allow(unused)]
 struct UserProfile {
     #[prompt("Enter your name:")]

@@ -149,11 +149,24 @@ impl EguiWizardApp {
 
             if self.completed {
                 ui.label("Interview completed!");
+                // Display epilogue if present
+                if let Some(epilogue) = &self.interview.epilogue {
+                    ui.add_space(10.0);
+                    ui.label(epilogue);
+                }
                 return;
             }
 
             // Show all questions in a scrollable area
             egui::ScrollArea::vertical().show(ui, |ui| {
+                // Display prelude if present
+                if let Some(prelude) = &self.interview.prelude {
+                    ui.label(prelude);
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(10.0);
+                }
+
                 let questions: Vec<_> = self.interview.sections.clone();
                 for (question_idx, question) in questions.iter().enumerate() {
                     // Skip questions that have assumptions

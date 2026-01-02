@@ -4,6 +4,8 @@ use crate::default::{AssumedAnswer, SuggestedAnswer};
 #[derive(Debug, Clone)]
 pub struct Interview {
     pub sections: Vec<Question>,
+    pub prelude: Option<String>,
+    pub epilogue: Option<String>,
 }
 
 #[derive(Debug, Clone)]

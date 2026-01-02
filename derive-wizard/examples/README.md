@@ -18,6 +18,7 @@ Examples demonstrating specific features:
 - **editor.rs** - Multi-line text input with `#[editor]` attribute
 - **suggestions.rs** - Pre-filling values with suggestions using `.with_suggestions()`
 - **assumptions.rs** - Using `.assume_field()` to skip questions entirely
+- **prelude_epilogue.rs** - Displaying welcome and completion messages with `#[prelude]` and `#[epilogue]`
 
 ### 📁 backends/
 Backend-specific examples:
@@ -78,6 +79,23 @@ cargo run --example showcase --features egui-backend  # Uses egui GUI
 ```
 
 ## Key Concepts
+
+### Prelude and Epilogue
+
+Display welcome and completion messages in your wizards using struct-level attributes:
+
+```rust
+#[derive(Wizard)]
+#[prelude("Welcome to the Configuration Wizard!")]
+#[epilogue("Configuration complete!")]
+struct Config {
+    // fields...
+}
+```
+
+- **Prelude**: Displayed before the first question (similar to wizify-rs `begin_msg`)
+- **Epilogue**: Displayed after all questions are answered (similar to wizify-rs `closing_msg`)
+- Both are optional and work with all backends
 
 ### Suggestions vs Assumptions
 

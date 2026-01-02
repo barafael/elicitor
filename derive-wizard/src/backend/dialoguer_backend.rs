@@ -10,6 +10,11 @@ impl DialoguerBackend {
         Self
     }
 
+    /// Strip trailing colon from prompt since dialoguer adds one automatically
+    fn strip_prompt_colon(prompt: &str) -> &str {
+        prompt.strip_suffix(':').unwrap_or(prompt).trim_end()
+    }
+
     fn execute_question(
         &self,
         question: &Question,
@@ -19,7 +24,8 @@ impl DialoguerBackend {
 
         match question.kind() {
             QuestionKind::Input(input_q) => {
-                let mut input = dialoguer::Input::<String>::new().with_prompt(question.prompt());
+                let mut input = dialoguer::Input::<String>::new()
+                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
 
                 if let Some(ref default) = input_q.default {
                     input = input.default(default.to_string());
@@ -45,7 +51,7 @@ impl DialoguerBackend {
             }
             QuestionKind::Masked(_masked_q) => {
                 let answer = dialoguer::Password::new()
-                    .with_prompt(question.prompt())
+                    .with_prompt(Self::strip_prompt_colon(question.prompt()))
                     .interact()
                     .map_err(|e| {
                         BackendError::ExecutionError(format!("Failed to prompt: {}", e))
@@ -249,6 +255,12 @@ impl InterviewBackend for DialoguerBackend {
     fn execute(&self, interview: &Interview) -> Result<Answers, BackendError> {
         use derive_wizard_types::default::AssumedAnswer;
 
+        // Display prelude if present
+        if let Some(prelude) = &interview.prelude {
+            println!("{}", prelude);
+            println!();
+        }
+
         let mut answers = Answers::new();
 
         for question in &interview.sections {
@@ -265,6 +277,12 @@ impl InterviewBackend for DialoguerBackend {
             }
 
             self.execute_question(question, &mut answers)?;
+        }
+
+        // Display epilogue if present
+        if let Some(epilogue) = &interview.epilogue {
+            println!();
+            println!("{}", epilogue);
         }
 
         Ok(answers)

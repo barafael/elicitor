@@ -18,7 +18,9 @@ use derive_wizard_types::interview::{
         validate_on_key,
         validate,
         min,
-        max
+        max,
+        prelude,
+        epilogue
     )
 )]
 pub fn wizard_derive(input: TokenStream) -> TokenStream {
@@ -64,6 +66,9 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
 }
 
 fn build_interview(input: &syn::DeriveInput) -> Interview {
+    let prelude = extract_string_attr(&input.attrs, "prelude");
+    let epilogue = extract_string_attr(&input.attrs, "epilogue");
+
     let sections = match &input.data {
         Data::Struct(data) => {
             if let Fields::Named(fields) = &data.fields {
@@ -113,7 +118,11 @@ fn build_interview(input: &syn::DeriveInput) -> Interview {
         Data::Union(_) => vec![],
     };
 
-    Interview { sections }
+    Interview {
+        sections,
+        prelude,
+        epilogue,
+    }
 }
 
 fn build_question(
@@ -358,6 +367,17 @@ fn extract_float_attr(attrs: &[syn::Attribute], name: &str) -> Option<f64> {
 }
 
 fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::TokenStream {
+    let prelude = interview
+        .prelude
+        .as_ref()
+        .map(|s| quote! { Some(#s.to_string()) })
+        .unwrap_or_else(|| quote! { None });
+    let epilogue = interview
+        .epilogue
+        .as_ref()
+        .map(|s| quote! { Some(#s.to_string()) })
+        .unwrap_or_else(|| quote! { None });
+
     // Generate runtime code that builds the interview, populating nested Wizard sequences
     let section_builders: Vec<_> = if let Data::Struct(struct_data) = data {
         if let Fields::Named(fields) = &struct_data.fields {
@@ -418,6 +438,8 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
             #(all_sections.extend(#section_builders);)*
             derive_wizard::interview::Interview {
                 sections: all_sections,
+                prelude: #prelude,
+                epilogue: #epilogue,
             }
         }
     }
