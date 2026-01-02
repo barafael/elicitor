@@ -1,4 +1,4 @@
-use derive_wizard::{field, FieldPath, Wizard};
+use derive_wizard::{FieldPath, Wizard, field};
 
 #[derive(Debug, PartialEq, Wizard)]
 struct Address {
@@ -23,12 +23,17 @@ fn main() {
     println!("Slash path: {}", path.to_slash_path());
     println!("Depth: {}", path.depth());
 
-    println!("\n--- Interview Structure ---");
+    println!("--- Interview Structure ---");
     let interview = UserWithAddress::interview();
     println!("Number of top-level sections: {}", interview.sections.len());
 
     for (i, q) in interview.sections.iter().enumerate() {
-        println!("\nSection {}: name='{}', prompt='{}'", i, q.name(), q.prompt());
+        println!(
+            "Section {}: name='{}', prompt='{}'",
+            i,
+            q.name(),
+            q.prompt()
+        );
         print_question_kind(q.kind(), 1);
     }
 }
@@ -45,14 +50,29 @@ fn print_question_kind(kind: &derive_wizard::interview::QuestionKind, indent: us
         QuestionKind::Float(_) => println!("{}Kind: Float", prefix),
         QuestionKind::Confirm(_) => println!("{}Kind: Confirm", prefix),
         QuestionKind::Sequence(questions) => {
-            println!("{}Kind: Sequence ({} nested questions)", prefix, questions.len());
+            println!(
+                "{}Kind: Sequence ({} nested questions)",
+                prefix,
+                questions.len()
+            );
             for (j, nested) in questions.iter().enumerate() {
-                println!("{}  [{}] name='{}', prompt='{}'", prefix, j, nested.name(), nested.prompt());
+                println!(
+                    "{}  [{}] name='{}', prompt='{}'",
+                    prefix,
+                    j,
+                    nested.name(),
+                    nested.prompt()
+                );
                 print_question_kind(nested.kind(), indent + 2);
             }
         }
         QuestionKind::Alternative(idx, alts) => {
-            println!("{}Kind: Alternative (default={}, {} alternatives)", prefix, idx, alts.len());
+            println!(
+                "{}Kind: Alternative (default={}, {} alternatives)",
+                prefix,
+                idx,
+                alts.len()
+            );
         }
     }
 }

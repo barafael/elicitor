@@ -41,6 +41,6 @@ fn main() {
     let backend = derive_wizard::DialoguerBackend::new();
     let profile = UserProfile::wizard_builder().with_backend(backend).build();
 
-    println!("\n=== Profile Created ===");
+    println!("=== Profile Created ===");
     println!("{:#?}", profile);
 }

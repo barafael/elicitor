@@ -24,6 +24,6 @@ fn main() {
 
     let settings = AppSettings::wizard_builder().with_backend(backend).build();
 
-    println!("\n=== Settings Created ===");
+    println!("=== Settings Created ===");
     println!("{:#?}", settings);
 }

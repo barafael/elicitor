@@ -94,13 +94,13 @@ fn main() {
         .with_backend(backend3)
         .build();
 
-    println!("\n=== Final Production Config (from assumptions) ===");
+    println!("=== Final Production Config (from assumptions) ===");
     println!("{:#?}", config_with_assumptions);
 
-    println!("\n=== Summary ===");
+    println!("=== Summary ===");
     println!("Suggestions: Pre-fill values but still show questions");
     println!("Assumptions: Skip questions entirely and use fixed values");
-    println!("\nAssumptions are perfect for:");
+    println!("Assumptions are perfect for:");
     println!("  - Automated deployments");
     println!("  - Security-critical settings that shouldn't be changed");
     println!("  - Configuration templates with enforced policies");

@@ -44,6 +44,6 @@ fn main() {
 
     let profile = UserProfile::wizard_builder().with_backend(backend).build();
 
-    println!("\n=== Profile Created ===");
+    println!("=== Profile Created ===");
     println!("{:#?}", profile);
 }

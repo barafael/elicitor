@@ -42,7 +42,7 @@ fn main() {
 
     let settings = AppSettings::wizard_builder().with_backend(backend).build();
 
-    println!("\n=== Settings Created ===");
+    println!("=== Settings Created ===");
     println!("{:#?}", settings);
 
     // Second run: Edit existing settings with suggestions
@@ -58,6 +58,6 @@ fn main() {
         .with_backend(backend)
         .build();
 
-    println!("\n=== Updated Settings ===");
+    println!("=== Updated Settings ===");
     println!("{:#?}", updated_settings);
 }

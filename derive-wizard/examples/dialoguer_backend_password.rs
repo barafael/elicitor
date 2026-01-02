@@ -51,6 +51,6 @@ fn main() {
         .with_backend(backend)
         .build();
 
-    println!("\n=== Configuration Created ===");
+    println!("=== Configuration Created ===");
     println!("{:#?}", config);
 }

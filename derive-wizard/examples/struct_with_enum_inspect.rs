@@ -140,7 +140,7 @@ fn main() {
         print_question(question, 0);
     }
 
-    println!("\n--- PaymentMethod Interview Structure ---");
+    println!("--- PaymentMethod Interview Structure ---");
     let payment_interview = PaymentMethod::interview();
     println!(
         "Number of questions in PaymentMethod: {}",

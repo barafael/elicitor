@@ -41,7 +41,7 @@ fn main() {
     println!("--- First Run: Create New Settings ---");
     let settings = AppSettings::wizard_builder().with_backend(backend).build();
 
-    println!("\n=== Settings Created ===");
+    println!("=== Settings Created ===");
     println!("{:#?}", settings);
 
     // Edit existing settings with suggestions using builder API
@@ -53,6 +53,6 @@ fn main() {
         .with_backend(backend)
         .build();
 
-    println!("\n=== Updated Settings ===");
+    println!("=== Updated Settings ===");
     println!("{:#?}", updated_settings);
 }

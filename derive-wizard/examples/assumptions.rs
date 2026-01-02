@@ -36,13 +36,13 @@ fn main() {
         .assume_field("port", 443) // Fixed: HTTPS port
         .build(); // Will only ask about 'app_name' and 'database_url'
 
-    println!("\n=== Configuration (with partial assumptions) ===");
+    println!("=== Configuration (with partial assumptions) ===");
     println!("{:#?}", config);
     println!("Notice: Only asked about app_name and database_url!");
     println!("The fields 'environment', 'debug', and 'port' were assumed.");
 
     // Scenario 2: Full assumptions - for batch processing
-    println!("\n--- Scenario 2: Full Assumptions (for automation) ---");
+    println!("--- Scenario 2: Full Assumptions (for automation) ---");
     println!("Using a complete template - no questions will be asked.");
 
     let batch_config = DeploymentConfig::wizard_builder()
