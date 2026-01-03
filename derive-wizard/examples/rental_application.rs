@@ -5,6 +5,7 @@ use derive_wizard::Wizard;
 #[derive(Wizard, Debug)]
 #[prelude("Please complete all sections of this application.")]
 #[epilogue("Thank you for applying!")]
+#[allow(unused)]
 struct RentalApplication {
     #[prompt("Full Legal Name")]
     full_name: String,
@@ -20,6 +21,7 @@ struct RentalApplication {
 }
 
 #[derive(Wizard, Debug)]
+#[allow(unused)]
 enum EmploymentStatus {
     #[prompt("Employed")]
     Employed {

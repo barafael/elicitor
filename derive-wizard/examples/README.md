@@ -15,7 +15,7 @@ Fundamental examples showing core functionality:
 Examples demonstrating specific features:
 - **validation.rs** - Input validation with `#[validate]`, `#[validate_on_key]`, and `#[validate_on_submit]`
 - **password_masking.rs** - Password masking with `#[mask]` attribute
-- **editor.rs** - Multi-line text input with `#[editor]` attribute
+- **editor.rs** - Multi-line text input with `#[multiline]` attribute
 - **suggestions.rs** - Pre-filling values with suggestions using `.with_suggestions()`
 - **assumptions.rs** - Using `.assume_field()` to skip questions entirely
 - **prelude_epilogue.rs** - Displaying welcome and completion messages with `#[prelude]` and `#[epilogue]`

@@ -18,9 +18,9 @@ struct ShowCase {
     #[mask]
     password: String,
 
-    // Long text with editor
+    // Long text with multiline editor
     #[prompt("Enter a bio:")]
-    #[editor]
+    #[multiline]
     bio: String,
 
     // Bool type - defaults to 'confirm'
@@ -72,9 +72,9 @@ struct LoginForm {
 }
 ```
 
-### Long Text with `#[editor]`
+### Long Text with `#[multiline]`
 
-For longer text input, use the `#[editor]` attribute to open the user's preferred text editor:
+For longer text input, use the `#[multiline]` attribute to open the user's preferred text editor:
 
 ```rust
 use derive_wizard::Wizard;
@@ -85,7 +85,7 @@ struct Article {
     title: String,
 
     #[prompt("Write the article content:")]
-    #[editor]
+    #[multiline]
     content: String,  // Opens text editor (vim, nano, etc.)
 }
 ```
@@ -94,11 +94,11 @@ struct Article {
 
 - `#[prompt("message")]` - **Required**. The message to display to the user
 - `#[mask]` - **Optional**. For String fields: enables password input (hidden text)
-- `#[editor]` - **Optional**. For String fields: opens text editor for longer input
+- `#[multiline]` - **Optional**. For String fields: opens text editor for longer input
 - `#[validate_on_submit("function_name")]` - **Optional**. Validates input when user submits
 - `#[validate_on_key("function_name")]` - **Optional**. Validates input on every keystroke
 
-**Note**: `#[mask]` and `#[editor]` are mutually exclusive and cannot be used on the same field.
+**Note**: `#[mask]` and `#[multiline]` are mutually exclusive and cannot be used on the same field.
 
 ## Using the Builder API
 
@@ -165,7 +165,7 @@ When `with_suggestions()` is used:
 - For **String** fields: the current value is shown as a hint/placeholder
 - For **numeric** fields (integers and floats): the current value is shown as suggested
 - For **bool** fields: the current value is pre-selected
-- For **password** (`#[mask]`) and **editor** (`#[editor]`) fields: suggestions are shown as hints (backend-dependent)
+- For **password** (`#[mask]`) and **multiline** (`#[multiline]`) fields: suggestions are shown as hints (backend-dependent)
 
 ### Suggesting Individual Fields
 
@@ -375,7 +375,7 @@ The `#[derive(Wizard)]` macro supports all 11 requestty question types:
 
 | Rust Type                          | Default Question Type | Override Options                                    | Returns              |
 |------------------------------------|-----------------------|-----------------------------------------------------|----------------------|
-| `String`                           | `input`               | `#[mask]` for password, `#[editor]` for text editor | `String`             |
+| `String`                           | `input`               | `#[mask]` for password, `#[multiline]` for text editor | `String`             |
 | `bool`                             | `confirm`             | -                                                   | `bool`               |
 | `i8`, `i16`, `i32`, `i64`, `isize` | `int`                 | -                                                   | `i64` (cast to type) |
 | `u8`, `u16`, `u32`, `u64`, `usize` | `int`                 | -                                                   | `i64` (cast to type) |
@@ -388,7 +388,7 @@ The `#[derive(Wizard)]` macro supports all 11 requestty question types:
 
 1. **input** - Basic text input prompt (default for String)
 2. **password** - Hidden text input (use `#[mask]` on String fields)
-3. **editor** - Opens text editor for longer input (use `#[editor]` on String fields)
+3. **editor** - Opens text editor for longer input (use `#[multiline]` on String fields)
 4. **confirm** - Yes/No confirmation prompt (default for bool)
 5. **int** - Integer input (default for integer types)
 6. **float** - Floating point input (default for float types)

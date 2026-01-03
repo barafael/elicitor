@@ -1,12 +1,8 @@
 [workspace]
 
-resolver = "3"
-
 default-members = ["derive-wizard"]
 
-members = [
-    "derive-wizard",
-    "derive-wizard-macro",
-    "derive-wizard-types",
-    "example-wizard",
+members = ["derive-wizard", "derive-wizard-macro", "derive-wizard-types", "example-wizard",
 ]
+
+resolver = "3"

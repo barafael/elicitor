@@ -514,14 +514,12 @@ impl EguiWizardApp {
                                     ) {
                                         valid = false;
                                     }
-                                } else {
-                                    if !self.validate_question_recursive(
-                                        field_q,
-                                        question_idx * 1000 + selected * 100 + idx,
-                                        answers,
-                                    ) {
-                                        valid = false;
-                                    }
+                                } else if !self.validate_question_recursive(
+                                    field_q,
+                                    question_idx * 1000 + selected * 100 + idx,
+                                    answers,
+                                ) {
+                                    valid = false;
                                 }
                             }
                             valid

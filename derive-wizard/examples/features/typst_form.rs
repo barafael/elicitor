@@ -8,6 +8,7 @@ use derive_wizard::Wizard;
 #[derive(Wizard, Debug)]
 #[prelude("Please fill out this registration form carefully.")]
 #[epilogue("Thank you for your submission!")]
+#[allow(unused)]
 struct RegistrationForm {
     #[prompt("What is your full name?")]
     name: String,
@@ -27,6 +28,7 @@ struct RegistrationForm {
 }
 
 #[derive(Wizard, Debug)]
+#[allow(unused)]
 enum AccountType {
     Free,
 

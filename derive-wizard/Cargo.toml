@@ -86,8 +86,8 @@ name = "password_masking"
 path = "examples/features/password_masking.rs"
 
 [[example]]
-name = "editor"
-path = "examples/features/editor.rs"
+name = "multiline"
+path = "examples/features/multiline.rs"
 
 [[example]]
 name = "suggestions"

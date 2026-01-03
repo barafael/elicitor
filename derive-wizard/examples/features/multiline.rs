@@ -7,7 +7,7 @@ struct Article {
     title: String,
 
     #[prompt("Write the article content:")]
-    #[editor]
+    #[multiline]
     content: String,
 
     #[prompt("Add tags (comma-separated):")]
@@ -16,7 +16,7 @@ struct Article {
 
 fn main() {
     println!("Article Wizard Demo");
-    println!("This demonstrates the #[editor] attribute");
+    println!("This demonstrates the #[multiline] attribute");
     println!("which opens your preferred text editor for longer input.");
 
     let article = Article::wizard_builder().build();

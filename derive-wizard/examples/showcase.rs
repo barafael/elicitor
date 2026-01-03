@@ -12,9 +12,9 @@ struct ShowCase {
     #[mask]
     password: String,
 
-    // Long text with editor
+    // Long text with multiline editor
     #[prompt("Enter a bio:")]
-    #[editor]
+    #[multiline]
     bio: String,
 
     // Bool type - defaults to 'confirm'

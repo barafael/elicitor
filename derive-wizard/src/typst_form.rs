@@ -240,40 +240,40 @@ fn generate_enum(markup: &mut String, question: &Question, variants: &[Question]
         markup.push_str("  )\n");
 
         // If variant has fields, show them indented
-        if let QuestionKind::Alternative(_, fields) = variant.kind() {
-            if !fields.is_empty() {
-                markup.push_str("  #v(0.2em)\n");
-                markup.push_str("  #box(\n");
-                markup.push_str("    inset: (left: 1.5em, top: 0.15em, bottom: 0.15em),\n");
-                markup.push_str("    width: 100%,\n");
-                markup.push_str("  )[\n");
-                for field in fields {
-                    // Don't add extra heading for fields inside enum variants
-                    match field.kind() {
-                        QuestionKind::Sequence(nested_questions) => {
-                            // Check if this is a nested enum
-                            let is_nested_enum = !nested_questions.is_empty()
-                                && nested_questions
-                                    .iter()
-                                    .all(|q| matches!(q.kind(), QuestionKind::Alternative(_, _)));
+        if let QuestionKind::Alternative(_, fields) = variant.kind()
+            && !fields.is_empty()
+        {
+            markup.push_str("  #v(0.2em)\n");
+            markup.push_str("  #box(\n");
+            markup.push_str("    inset: (left: 1.5em, top: 0.15em, bottom: 0.15em),\n");
+            markup.push_str("    width: 100%,\n");
+            markup.push_str("  )[\n");
+            for field in fields {
+                // Don't add extra heading for fields inside enum variants
+                match field.kind() {
+                    QuestionKind::Sequence(nested_questions) => {
+                        // Check if this is a nested enum
+                        let is_nested_enum = !nested_questions.is_empty()
+                            && nested_questions
+                                .iter()
+                                .all(|q| matches!(q.kind(), QuestionKind::Alternative(_, _)));
 
-                            if is_nested_enum {
-                                // Render as enum without struct heading
-                                generate_enum(markup, field, nested_questions);
-                            } else {
-                                // Render struct fields directly without heading
-                                for nested_field in nested_questions {
-                                    generate_question_markup(markup, nested_field);
-                                }
+                        if is_nested_enum {
+                            // Render as enum without struct heading
+                            generate_enum(markup, field, nested_questions);
+                        } else {
+                            // Render struct fields directly without heading
+                            for nested_field in nested_questions {
+                                generate_question_markup(markup, nested_field);
                             }
                         }
-                        _ => {
-                            generate_question_markup(markup, field);
-                        }
+                    }
+                    _ => {
+                        generate_question_markup(markup, field);
                     }
                 }
-                markup.push_str("  ]\n");
             }
+            markup.push_str("  ]\n");
         }
     }
     markup.push_str("]\n\n");

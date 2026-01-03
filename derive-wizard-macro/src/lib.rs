@@ -13,7 +13,7 @@ use derive_wizard_types::interview::{
     attributes(
         prompt,
         mask,
-        editor,
+        multiline,
         validate_on_submit,
         validate_on_key,
         validate,
@@ -168,7 +168,7 @@ fn build_question(
             | "f64"
             | "PathBuf"
     ) && !attrs.mask
-        && !attrs.editor;
+        && !attrs.multiline;
 
     if is_custom_type {
         // For custom types, we assume they might be Wizards and need to expand their fields
@@ -192,7 +192,7 @@ fn build_question(
 struct FieldAttrs {
     prompt: String,
     mask: bool,
-    editor: bool,
+    multiline: bool,
     validate_on_key: Option<String>,
     validate_on_submit: Option<String>,
     min_int: Option<i64>,
@@ -208,7 +208,7 @@ impl FieldAttrs {
             prompt: extract_string_attr(attrs, "prompt")
                 .unwrap_or_else(|| format!("Enter {field_name}:")),
             mask: has_attr(attrs, "mask"),
-            editor: has_attr(attrs, "editor"),
+            multiline: has_attr(attrs, "multiline"),
             validate_on_key: extract_string_attr(attrs, "validate_on_key").or(validate.clone()),
             validate_on_submit: extract_string_attr(attrs, "validate_on_submit").or(validate),
             min_int: extract_int_attr(attrs, "min"),
@@ -228,7 +228,7 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
         });
     }
 
-    if attrs.editor {
+    if attrs.multiline {
         return QuestionKind::Multiline(MultilineQuestion {
             default: None,
             validate_on_key: attrs.validate_on_key.clone(),
