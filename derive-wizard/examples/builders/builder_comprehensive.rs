@@ -17,82 +17,113 @@ struct UserProfile {
     subscribe: bool,
 }
 
-fn main() {
-    println!("=== Comprehensive Builder API Demo ===");
-
-    // Example 1: Default usage (uses requestty backend by default)
+/// Choose which backend to demonstrate
+#[derive(Debug, Clone, Wizard)]
+enum BackendChoice {
+    /// CLI prompts using requestty
     #[cfg(feature = "requestty-backend")]
-    {
-        println!("--- Example 1: Default Builder (Requestty) ---");
-        let profile1 = UserProfile::wizard_builder().build().unwrap();
-        println!("Profile: {:#?}", profile1);
-    }
+    Requestty,
 
-    // Example 2: With dialoguer backend
+    /// CLI prompts using dialoguer
     #[cfg(feature = "dialoguer-backend")]
-    {
-        println!("--- Example 2: Builder with Dialoguer Backend ---");
-        let backend = derive_wizard::DialoguerBackend::new();
-        let profile2 = UserProfile::wizard_builder()
-            .with_backend(backend)
-            .build()
-            .unwrap();
-        println!("Profile: {:#?}", profile2);
-    }
+    Dialoguer,
 
-    // Example 3: With egui backend
+    /// TUI interface using ratatui
+    #[cfg(feature = "ratatui-backend")]
+    Ratatui,
+
+    /// GUI form using egui
     #[cfg(feature = "egui-backend")]
-    {
-        println!("--- Example 3: Builder with Egui Backend ---");
-        let backend = derive_wizard::EguiBackend::new()
-            .with_title("User Profile")
-            .with_window_size([450.0, 350.0]);
+    Egui,
 
-        let profile3 = UserProfile::wizard_builder()
-            .with_backend(backend)
-            .build()
-            .unwrap();
-        println!("Profile: {:#?}", profile3);
-    }
-
-    // Example 4: With suggestions (will be prompted with these as starting values)
+    /// Demo with pre-filled suggestions
     #[cfg(feature = "requestty-backend")]
-    {
-        println!("--- Example 4: Builder with Suggested Values ---");
-        let suggestions = UserProfile {
-            name: "John Doe".to_string(),
-            age: 30,
-            email: "john@example.com".to_string(),
-            subscribe: true,
-        };
+    Suggestions,
+}
 
-        let profile4 = UserProfile::wizard_builder()
-            .with_suggestions(suggestions)
-            .build()
-            .unwrap();
-        println!("Profile: {:#?}", profile4);
+fn main() {
+    println!("=== Comprehensive Builder API Demo ===\n");
+
+    // Use requestty to let the user choose which backend to demo
+    let choice = BackendChoice::wizard_builder().build().unwrap();
+
+    match choice {
+        #[cfg(feature = "requestty-backend")]
+        BackendChoice::Requestty => run_requestty_demo(),
+
+        #[cfg(feature = "dialoguer-backend")]
+        BackendChoice::Dialoguer => run_dialoguer_demo(),
+
+        #[cfg(feature = "ratatui-backend")]
+        BackendChoice::Ratatui => run_ratatui_demo(),
+
+        #[cfg(feature = "egui-backend")]
+        BackendChoice::Egui => run_egui_demo(),
+
+        #[cfg(feature = "requestty-backend")]
+        BackendChoice::Suggestions => run_suggestions_demo(),
     }
 
-    // Example 5: Combining suggestions with custom backend
-    #[cfg(all(feature = "requestty-backend", feature = "dialoguer-backend"))]
-    {
-        println!("--- Example 5: Builder with Suggestions AND Custom Backend ---");
-        let suggestions = UserProfile {
-            name: "Jane Smith".to_string(),
-            age: 25,
-            email: "jane@example.com".to_string(),
-            subscribe: false,
-        };
+    println!("\n=== Demo Complete ===");
+}
 
-        let backend = derive_wizard::DialoguerBackend::new();
+#[cfg(feature = "requestty-backend")]
+fn run_requestty_demo() {
+    println!("\n--- Requestty Backend Demo ---");
+    let profile = UserProfile::wizard_builder().build().unwrap();
+    println!("Profile: {:#?}", profile);
+}
 
-        let profile5 = UserProfile::wizard_builder()
-            .with_suggestions(suggestions)
-            .with_backend(backend)
-            .build()
-            .unwrap();
-        println!("Profile: {:#?}", profile5);
-    }
+#[cfg(feature = "dialoguer-backend")]
+fn run_dialoguer_demo() {
+    println!("\n--- Dialoguer Backend Demo ---");
+    let backend = derive_wizard::DialoguerBackend::new();
+    let profile = UserProfile::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
+    println!("Profile: {:#?}", profile);
+}
 
-    println!("=== Demo Complete ===");
+#[cfg(feature = "ratatui-backend")]
+fn run_ratatui_demo() {
+    println!("\n--- Ratatui Backend Demo ---");
+    let backend = derive_wizard::RatatuiBackend::new()
+        .with_title("User Profile");
+
+    let profile = UserProfile::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
+    println!("Profile: {:#?}", profile);
+}
+
+#[cfg(feature = "egui-backend")]
+fn run_egui_demo() {
+    println!("\n--- Egui Backend Demo ---");
+    let backend = derive_wizard::EguiBackend::new()
+        .with_title("User Profile")
+        .with_window_size([450.0, 350.0]);
+
+    let profile = UserProfile::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
+    println!("Profile: {:#?}", profile);
+}
+
+#[cfg(feature = "requestty-backend")]
+fn run_suggestions_demo() {
+    println!("\n--- Demo with Suggestions ---");
+    let suggestions = UserProfile {
+        name: "John Doe".to_string(),
+        age: 30,
+        email: "john@example.com".to_string(),
+        subscribe: true,
+    };
+    let profile = UserProfile::wizard_builder()
+        .with_suggestions(suggestions)
+        .build()
+        .unwrap();
+    println!("Profile: {:#?}", profile);
 }

@@ -505,8 +505,12 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
             })
         },
         Some(_) if is_integer_type(ty) => {
-            let min = attrs.min_int.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
-            let max = attrs.max_int.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let min = attrs
+                .min_int
+                .map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let max = attrs
+                .max_int
+                .map_or_else(|| quote!(None), |v| quote!(Some(#v)));
             quote! {
                 derive_wizard::interview::QuestionKind::Int(derive_wizard::interview::IntQuestion {
                     default: None,
@@ -517,8 +521,12 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
             }
         }
         Some(_) if is_float_type(ty) => {
-            let min = attrs.min_float.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
-            let max = attrs.max_float.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let min = attrs
+                .min_float
+                .map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let max = attrs
+                .max_float
+                .map_or_else(|| quote!(None), |v| quote!(Some(#v)));
             quote! {
                 derive_wizard::interview::QuestionKind::Float(derive_wizard::interview::FloatQuestion {
                     default: None,
@@ -907,16 +915,14 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
                 )]
             }]
         }
-        _ => {
-            interview
-                .sections
-                .iter()
-                .map(|q| {
-                    let q_code = generate_question_code(q);
-                    quote! { vec![#q_code] }
-                })
-                .collect()
-        }
+        _ => interview
+            .sections
+            .iter()
+            .map(|q| {
+                let q_code = generate_question_code(q);
+                quote! { vec![#q_code] }
+            })
+            .collect(),
     };
 
     quote! {
