@@ -16,16 +16,16 @@ eframe = { version = "0.33", optional = true }
 dialoguer = { version = "0.12", optional = true }
 typst = { version = "0.14", optional = true }
 itertools = { version = "0.14", optional = true }
-ratatui = { version = "0.29", optional = true }
-crossterm = { version = "0.28", optional = true }
+ratatui = { version = "0.30", optional = true }
+crossterm = { version = "0.29", optional = true }
 
 [features]
 default = ["requestty-backend"]
-requestty-backend = ["requestty"]
-egui-backend = ["egui", "eframe", "itertools"]
-dialoguer-backend = ["dialoguer"]
-ratatui-backend = ["ratatui", "crossterm"]
-typst-backend = ["typst"]
+requestty-backend = ["dep:requestty"]
+egui-backend = ["dep:egui", "dep:eframe", "dep:itertools"]
+dialoguer-backend = ["dep:dialoguer"]
+ratatui-backend = ["dep:ratatui", "dep:crossterm"]
+typst-backend = ["dep:typst"]
 typst-form = []
 
 [[example]]
