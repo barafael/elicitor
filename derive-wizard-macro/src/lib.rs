@@ -372,12 +372,11 @@ fn is_builtin_type(ty: &Type) -> bool {
 fn extract_vec_inner_type(ty: &Type) -> Option<&Type> {
     if let Type::Path(type_path) = ty {
         let last_segment = type_path.path.segments.last()?;
-        if last_segment.ident == "Vec" {
-            if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
-                if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                    return Some(inner_ty);
-                }
-            }
+        if last_segment.ident == "Vec"
+            && let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
+            && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+        {
+            return Some(inner_ty);
         }
     }
     None
@@ -627,39 +626,39 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
                 let field_name = field.ident.as_ref().unwrap().to_string();
 
                 // Check if this is a Vec<EnumType> (MultiSelect)
-                if matches!(question.kind(), QuestionKind::MultiSelect(_)) {
-                    if let Some(inner_ty) = extract_vec_inner_type(field_ty) {
-                        let prompt = question.prompt();
-                        // Generate code that gets variant names from the inner enum's interview
-                        return quote! {
-                            {
-                                let inner_interview = <#inner_ty as derive_wizard::Wizard>::interview();
-                                // Extract variant names from the enum's alternatives
-                                let options: Vec<String> = inner_interview.sections.iter()
-                                    .filter_map(|q| {
-                                        if let derive_wizard::interview::QuestionKind::Sequence(alts) = q.kind() {
-                                            Some(alts.iter().map(|alt| alt.name().to_string()).collect::<Vec<_>>())
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .flatten()
-                                    .collect();
+                if matches!(question.kind(), QuestionKind::MultiSelect(_))
+                    && let Some(inner_ty) = extract_vec_inner_type(field_ty)
+                {
+                    let prompt = question.prompt();
+                    // Generate code that gets variant names from the inner enum's interview
+                    return quote! {
+                        {
+                            let inner_interview = <#inner_ty as derive_wizard::Wizard>::interview();
+                            // Extract variant names from the enum's alternatives
+                            let options: Vec<String> = inner_interview.sections.iter()
+                                .filter_map(|q| {
+                                    if let derive_wizard::interview::QuestionKind::Sequence(alts) = q.kind() {
+                                        Some(alts.iter().map(|alt| alt.name().to_string()).collect::<Vec<_>>())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .flatten()
+                                .collect();
 
-                                vec![derive_wizard::interview::Question::new(
-                                    Some(#field_name.to_string()),
-                                    #field_name.to_string(),
-                                    #prompt.to_string(),
-                                    derive_wizard::interview::QuestionKind::MultiSelect(
-                                        derive_wizard::interview::MultiSelectQuestion {
-                                            options,
-                                            defaults: vec![],
-                                        }
-                                    ),
-                                )]
-                            }
-                        };
-                    }
+                            vec![derive_wizard::interview::Question::new(
+                                Some(#field_name.to_string()),
+                                #field_name.to_string(),
+                                #prompt.to_string(),
+                                derive_wizard::interview::QuestionKind::MultiSelect(
+                                    derive_wizard::interview::MultiSelectQuestion {
+                                        options,
+                                        defaults: vec![],
+                                    }
+                                ),
+                            )]
+                        }
+                    };
                 }
 
                 // Check if this is a Sequence (nested Wizard marker)
@@ -917,7 +916,7 @@ fn generate_from_answers_enum(name: &syn::Ident, data: &syn::DataEnum) -> proc_m
     });
 
     quote! {
-        let selected = answers.as_int(derive_wizard_types::SELECTED_ALTERNATIVE_KEY)?;
+        let selected = answers.as_int(derive_wizard::SELECTED_ALTERNATIVE_KEY)?;
         match selected {
             #(#match_arms)*
             _ => Err(derive_wizard::backend::BackendError::ExecutionError(
@@ -929,26 +928,26 @@ fn generate_from_answers_enum(name: &syn::Ident, data: &syn::DataEnum) -> proc_m
 
 fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::TokenStream {
     // Check for Vec<EnumType> for multi-select
-    if let Some(inner_ty) = extract_vec_inner_type(ty) {
-        if !is_builtin_type(inner_ty) {
-            // Vec of enum type - construct from selected indices
-            return quote! {
-                {
-                    let indices = answers.as_int_list(#field_name)?;
-                    indices.into_iter()
-                        .map(|idx| {
-                            // Create a temporary answers with just the alternative index
-                            let mut temp_answers = derive_wizard::Answers::default();
-                            temp_answers.insert(
-                                derive_wizard::SELECTED_ALTERNATIVE_KEY.to_string(),
-                                derive_wizard::AnswerValue::Int(idx),
-                            );
-                            <#inner_ty as derive_wizard::Wizard>::from_answers(&temp_answers)
-                        })
-                        .collect::<Result<Vec<_>, _>>()?
-                }
-            };
-        }
+    if let Some(inner_ty) = extract_vec_inner_type(ty)
+        && !is_builtin_type(inner_ty)
+    {
+        // Vec of enum type - construct from selected indices
+        return quote! {
+            {
+                let indices = answers.as_int_list(#field_name)?;
+                indices.into_iter()
+                    .map(|idx| {
+                        // Create a temporary answers with just the alternative index
+                        let mut temp_answers = derive_wizard::Answers::default();
+                        temp_answers.insert(
+                            derive_wizard::SELECTED_ALTERNATIVE_KEY.to_string(),
+                            derive_wizard::AnswerValue::Int(idx),
+                        );
+                        <#inner_ty as derive_wizard::Wizard>::from_answers(&temp_answers)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
+            }
+        };
     }
 
     if let Some(type_name) = type_ident_name(ty) {
