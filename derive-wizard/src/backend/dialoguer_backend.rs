@@ -293,7 +293,7 @@ impl InterviewBackend for DialoguerBackend {
         interview: &Interview,
         validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
     ) -> Result<Answers, BackendError> {
-        use derive_wizard_types::default::AssumedAnswer;
+        use derive_wizard_types::AssumedAnswer;
 
         // Display prelude if present
         if let Some(prelude) = &interview.prelude {
