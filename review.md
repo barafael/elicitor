@@ -11,8 +11,8 @@
 Originally 23 issues were identified. **Current status (after fixes on 2026-01-04):**
 
 - 🔴 **0 Critical Bugs open** (critical items #2, #3, #4 were fixed)
-- 🟡 **6 Quality Issues** - Code maintainability and design problems  
-- 🟠 **10 Conceptual Shortcomings** - Architecture and API design limitations
+- 🟡 **4 Quality Issues** - Code maintainability and design problems (issues #5, #6 fixed)
+- 🟠 **9 Conceptual Shortcomings** - Architecture and API design limitations (issue #10 fixed)
 - 📋 **3 Testing Gaps** - Missing test coverage
 
 **Verification:** `cargo test` (all pass) and `cargo test --doc` (all pass) on 2026-01-04.
@@ -119,124 +119,32 @@ Status: Fixed on 2026-01-04. Error aggregation no longer unwraps; safe matching 
 
 ## 🟡 Quality Issues
 
-### #5: Global UI State Mutation in egui
+### #5: Global UI State Mutation in egui (Resolved)
 
-**Location:** `derive-wizard/src/backend/egui_backend.rs:410-412, 447-449, 479-481`  
-**Severity:** High
-
-```rust
-// Check for validation error before any mutable borrows
-let has_error = self.state.validation_errors.contains_key(id);
-
-let buffer = self.state.get_or_init_buffer(id);
-let mut text_edit = egui::TextEdit::singleline(buffer);
-
-// Add red border if there's a validation error
-if has_error {
-    ui.visuals_mut().widgets.inactive.bg_stroke.color = egui::Color32::RED;
-    ui.visuals_mut().widgets.hovered.bg_stroke.color = egui::Color32::RED;
-    ui.visuals_mut().widgets.active.bg_stroke.color = egui::Color32::RED;
-}
-```
+**Location:** `derive-wizard/src/backend/egui_backend.rs`  
+**Severity:** Resolved
 
 **Problem:**
 
-- Mutates **global UI visuals** instead of styling individual widgets
-- Affects ALL widgets in the UI after this point, not just the invalid input
-- Side effects persist across frames
-- Next widget rendered will also have red borders
+- Code mutated global UI visuals instead of styling individual widgets
+- Affected ALL widgets in the UI after the error field
+- Side effects persisted across frames
 
-**Impact:**
-
-- Visual glitches where unrelated fields show validation errors
-- Non-deterministic UI behavior
-- Hard to debug rendering issues
-
-**Recommended Fix:**
-
-```rust
-let text_edit = if has_error {
-    egui::TextEdit::singleline(buffer)
-        .frame(true)
-        .stroke(egui::Stroke::new(1.0, egui::Color32::RED))
-} else {
-    egui::TextEdit::singleline(buffer)
-};
-```
-
-Or use Frame wrapping:
-
-```rust
-let frame = if has_error {
-    egui::Frame::none()
-        .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
-        .inner_margin(2.0)
-} else {
-    egui::Frame::none()
-};
-
-frame.show(ui, |ui| {
-    ui.add(egui::TextEdit::singleline(buffer));
-});
-```
+Status: Fixed on 2026-01-04. Removed the `visuals_mut()` border styling entirely. The inline error message (⚠ with red text on pink background below the field) provides clear validation feedback without global state mutation.
 
 ---
 
-### #6: Code Duplication in Validation
+### #6: Code Duplication in Validation (Resolved)
 
-**Location:** `derive-wizard/src/backend/egui_backend.rs:417-431, 454-468, 491-505`  
-**Severity:** Medium
+**Location:** `derive-wizard/src/backend/egui_backend.rs`  
+**Severity:** Resolved
 
 **Problem:**
 
 - Nearly identical validation code repeated 3 times for Input/Multiline/Masked types
 - ~30 lines duplicated per question type
-- Changes must be synchronized across all three locations
 
-**Duplicated Pattern:**
-
-```rust
-if <question_type>.validate.is_some() {
-    let value = self.state.input_buffers.get(id).cloned().unwrap_or_default();
-    let current_answers = self.build_current_answers();
-    match (self.validator)(id, &value, &current_answers) {
-        Ok(()) => {
-            self.state.validation_errors.remove(id);
-        }
-        Err(err) => {
-            self.state.validation_errors.insert(id.to_string(), err);
-        }
-    }
-}
-```
-
-**Recommended Fix:**
-
-```rust
-fn validate_text_field(&mut self, id: &str, has_validator: bool) {
-    if !has_validator {
-        return;
-    }
-    
-    let value = self.state.input_buffers
-        .get(id)
-        .cloned()
-        .unwrap_or_default();
-    let current_answers = self.build_current_answers();
-    
-    match (self.validator)(id, &value, &current_answers) {
-        Ok(()) => {
-            self.state.validation_errors.remove(id);
-        }
-        Err(err) => {
-            self.state.validation_errors.insert(id.to_string(), err);
-        }
-    }
-}
-
-// Usage:
-self.validate_text_field(id, input_q.validate.is_some());
-```
+Status: Fixed on 2026-01-04. Extracted a `validate_text_field()` helper method. The 3 duplicate blocks are now single method calls.
 
 ---
 
@@ -360,10 +268,10 @@ impl Answers {
 
 ---
 
-### #10: Missing Nested Wizard Validation
+### #10: Missing Nested Wizard Validation (Resolved)
 
-**Location:** `derive-wizard-macro/src/lib.rs:690-705`  
-**Severity:** Medium
+**Location:** `derive-wizard-macro/src/lib.rs:974-1002`  
+**Severity:** Resolved
 
 **Problem:**
 
@@ -371,30 +279,7 @@ impl Answers {
 - Only creates filtered answer set and calls `from_answers`
 - Nested struct fields skip validation entirely
 
-```rust
-type_str => {
-    let type_ident = syn::parse_str::<syn::Ident>(type_str).unwrap();
-    let prefix = format!("{}.", field_name);
-    quote! {
-        {
-            let mut nested_answers = derive_wizard::Answers::default();
-            let prefix = #prefix;
-            for (key, value) in answers.iter() {
-                if let Some(stripped) = key.strip_prefix(prefix) {
-                    nested_answers.insert(stripped.to_string(), value.clone());
-                }
-            }
-            #type_ident::from_answers(&nested_answers)?
-            // ❌ Should call validate_field for nested type!
-        }
-    }
-}
-```
-
-**Impact:** Validation gaps in complex nested forms
-
-**Recommended Fix:**
-Generate validation calls for nested types or document this limitation clearly.
+Status: Fixed on 2026-01-04. The macro now generates code that iterates over nested answers and calls `<NestedType as Wizard>::validate_field()` for each field before calling `from_answers()`. Verified by code inspection.
 
 ---
 
@@ -814,13 +699,13 @@ fn test_empty_interview() {
 1. ✅ **Fix #2**: Change `build()` to return `Result<T, BackendError>` (done)
 2. ✅ **Fix #3**: Make egui validation channel handling panic-free (done)
 3. ✅ **Fix #4**: Avoid unwraps when aggregating errors (done)
-4. 🔄 **Fix #5**: Stop mutating global UI visuals in egui (still open)
-5. 🔄 **Fix #6**: Extract duplicated validation code (still open)
+4. ✅ **Fix #5**: Stop mutating global UI visuals in egui (done - simplified by removing border styling)
+5. ✅ **Fix #6**: Extract duplicated validation code (done - added `validate_text_field()` helper)
 6. ✅ **Fix #21**: Add error path tests (doctests and cargo test currently green)
 
 ### Short Term (Next Sprint)
 
-1. Fix #10: Add nested wizard validation
+1. ✅ ~~Fix #10: Add nested wizard validation~~ (already implemented)
 2. Add #11: Cancellation support
 3. Improve #8: Expand Answers API
 
@@ -894,20 +779,21 @@ pub trait QuestionPlugin {
 
 ## Conclusion
 
-The derive-wizard crate has a solid foundation but needs improvements in:
+The derive-wizard crate has a solid foundation with good progress on fixes:
 
-1. **UI Implementation** - Fix egui visual mutation bug (still open)
-2. **Validation** - Support more timing modes, nested validation, and async
+1. **UI Implementation** - ✅ egui visual mutation bug fixed (simplified by removing border styling)
+2. **Validation** - ✅ Nested validation now works, consider async support for future
 3. **Testing** - Broaden coverage for error paths and GUI behavior
 4. **Architecture** - Better separation of concerns and extensibility
 
-**Overall Code Quality:** 6.5/10
+**Overall Code Quality:** 7/10 (improved from 6.5)
 
-- Strong: API design, macro implementation
-- Weak: Error handling, testing, edge cases
+- Strong: API design, macro implementation, multi-backend support
+- Weak: Testing coverage, edge cases
 
 **Recommended Next Steps:**
 
-1. Fix open issues #5 (egui visuals) and #6 (validation dedupe)
-2. Improve validation architecture (nested/conditional/async)
+1. ✅ ~~Fix open issues #5 (egui visuals) and #6 (validation dedupe)~~ Done
+2. ✅ ~~Nested validation~~ Already implemented
 3. Expand test coverage (GUI, error paths) toward 80%+
+4. Consider async validation for database lookups etc.
