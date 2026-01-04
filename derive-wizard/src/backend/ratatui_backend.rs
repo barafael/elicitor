@@ -165,6 +165,10 @@ enum FlatQuestionKind {
     Select {
         options: Vec<String>,
         default_idx: usize,
+        /// For enum variants: the alternatives with their nested questions
+        alternatives: Option<Vec<Question>>,
+        /// For enum variants: the prefix for nested field IDs
+        id_prefix: Option<String>,
     },
     MultiSelect {
         options: Vec<String>,
@@ -325,13 +329,13 @@ impl WizardState {
                             kind: FlatQuestionKind::Select {
                                 options,
                                 default_idx: 0,
+                                alternatives: Some(nested.clone()),
+                                id_prefix: Some(parent_id.to_string()),
                             },
                             default_value: None,
                             assumed: question.assumed().cloned(),
                             has_validation: false,
                         });
-                        // Note: For a full implementation, we'd need to handle
-                        // dynamically showing variant fields after selection
                     } else {
                         flat.extend(Self::flatten_questions(nested, &id));
                     }
@@ -345,6 +349,8 @@ impl WizardState {
                         kind: FlatQuestionKind::Select {
                             options,
                             default_idx: *default_idx,
+                            alternatives: Some(alternatives.clone()),
+                            id_prefix: None,
                         },
                         default_value: None,
                         assumed: question.assumed().cloned(),
@@ -503,11 +509,37 @@ impl WizardState {
                 self.answers
                     .insert(question.id.clone(), AnswerValue::Bool(answer));
             }
-            FlatQuestionKind::Select { .. } => {
+            FlatQuestionKind::Select {
+                alternatives,
+                id_prefix,
+                ..
+            } => {
+                // Store the selected variant index
                 self.answers.insert(
                     question.id.clone(),
                     AnswerValue::Int(self.selected_option as i64),
                 );
+
+                // For enum variants: expand the selected variant's fields
+                if let Some(alts) = alternatives {
+                    if let Some(selected_variant) = alts.get(self.selected_option) {
+                        if let QuestionKind::Alternative(_, variant_fields) =
+                            selected_variant.kind()
+                        {
+                            // Flatten the variant's fields and insert them after the current question
+                            let prefix = id_prefix.clone().unwrap_or_default();
+                            let variant_questions =
+                                Self::flatten_questions(variant_fields, &prefix);
+                            if !variant_questions.is_empty() {
+                                // Insert after current position
+                                let insert_pos = self.current_index + 1;
+                                for (i, q) in variant_questions.into_iter().enumerate() {
+                                    self.questions.insert(insert_pos + i, q);
+                                }
+                            }
+                        }
+                    }
+                }
             }
             FlatQuestionKind::MultiSelect { .. } => {
                 // Collect indices of all selected options
