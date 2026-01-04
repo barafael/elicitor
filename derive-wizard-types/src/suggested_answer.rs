@@ -8,24 +8,24 @@ pub enum SuggestedAnswer {
 
 impl From<String> for SuggestedAnswer {
     fn from(v: String) -> Self {
-        SuggestedAnswer::String(v)
+        Self::String(v)
     }
 }
 
 impl From<i64> for SuggestedAnswer {
     fn from(v: i64) -> Self {
-        SuggestedAnswer::Int(v)
+        Self::Int(v)
     }
 }
 
 impl From<f64> for SuggestedAnswer {
     fn from(v: f64) -> Self {
-        SuggestedAnswer::Float(v)
+        Self::Float(v)
     }
 }
 
 impl From<bool> for SuggestedAnswer {
     fn from(v: bool) -> Self {
-        SuggestedAnswer::Bool(v)
+        Self::Bool(v)
     }
 }

@@ -472,6 +472,71 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
     }
 }
 
+/// Generate the QuestionKind code for a field (used for enum variant fields)
+fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::TokenStream {
+    if attrs.mask {
+        return quote! {
+            derive_wizard::interview::QuestionKind::Masked(derive_wizard::interview::MaskedQuestion {
+                mask: Some('*'),
+                validate: None,
+            })
+        };
+    }
+
+    if attrs.multiline {
+        return quote! {
+            derive_wizard::interview::QuestionKind::Multiline(derive_wizard::interview::MultilineQuestion {
+                default: None,
+                validate: None,
+            })
+        };
+    }
+
+    match type_ident_name(ty).as_deref() {
+        Some("String") | Some("PathBuf") => quote! {
+            derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
+                default: None,
+                validate: None,
+            })
+        },
+        Some("bool") => quote! {
+            derive_wizard::interview::QuestionKind::Confirm(derive_wizard::interview::ConfirmQuestion {
+                default: false,
+            })
+        },
+        Some(_) if is_integer_type(ty) => {
+            let min = attrs.min_int.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let max = attrs.max_int.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            quote! {
+                derive_wizard::interview::QuestionKind::Int(derive_wizard::interview::IntQuestion {
+                    default: None,
+                    min: #min,
+                    max: #max,
+                    validate: None,
+                })
+            }
+        }
+        Some(_) if is_float_type(ty) => {
+            let min = attrs.min_float.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            let max = attrs.max_float.map_or_else(|| quote!(None), |v| quote!(Some(#v)));
+            quote! {
+                derive_wizard::interview::QuestionKind::Float(derive_wizard::interview::FloatQuestion {
+                    default: None,
+                    min: #min,
+                    max: #max,
+                    validate: None,
+                })
+            }
+        }
+        _ => quote! {
+            derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
+                default: None,
+                validate: None,
+            })
+        },
+    }
+}
+
 fn extract_string_attr(attrs: &[syn::Attribute], name: &str) -> Option<String> {
     attrs.iter().find_map(|attr| {
         if !attr.path().is_ident(name) {
@@ -613,75 +678,236 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
         .unwrap_or_else(|| quote! { None });
 
     // Generate runtime code that builds the interview, populating nested Wizard sequences
-    let section_builders: Vec<_> = if let Data::Struct(struct_data) = data {
-        if let Fields::Named(fields) = &struct_data.fields {
-            fields.named.iter().zip(&interview.sections).map(|(field, question)| {
-                let field_ty = &field.ty;
-                let field_name = field.ident.as_ref().unwrap().to_string();
+    let section_builders: Vec<_> = match data {
+        Data::Struct(struct_data) => {
+            if let Fields::Named(fields) = &struct_data.fields {
+                fields.named.iter().zip(&interview.sections).map(|(field, question)| {
+                    let field_ty = &field.ty;
+                    let field_name = field.ident.as_ref().unwrap().to_string();
 
-                // Check if this is a Vec<EnumType> (MultiSelect)
-                if matches!(question.kind(), QuestionKind::MultiSelect(_))
-                    && let Some(inner_ty) = extract_vec_inner_type(field_ty)
-                {
-                    let prompt = question.prompt();
-                    // Generate code that gets variant names from the inner enum's interview
-                    return quote! {
-                        {
-                            let inner_interview = <#inner_ty as derive_wizard::Wizard>::interview();
-                            // Extract variant names from the enum's alternatives
-                            let options: Vec<String> = inner_interview.sections.iter()
-                                .filter_map(|q| {
-                                    if let derive_wizard::interview::QuestionKind::Sequence(alts) = q.kind() {
-                                        Some(alts.iter().map(|alt| alt.name().to_string()).collect::<Vec<_>>())
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .flatten()
-                                .collect();
+                    // Check if this is a Vec<EnumType> (MultiSelect)
+                    if matches!(question.kind(), QuestionKind::MultiSelect(_))
+                        && let Some(inner_ty) = extract_vec_inner_type(field_ty)
+                    {
+                        let prompt = question.prompt();
+                        // Generate code that gets variant names from the inner enum's interview
+                        return quote! {
+                            {
+                                let inner_interview = <#inner_ty as derive_wizard::Wizard>::interview();
+                                // Extract variant names from the enum's alternatives
+                                let options: Vec<String> = inner_interview.sections.iter()
+                                    .filter_map(|q| {
+                                        if let derive_wizard::interview::QuestionKind::Sequence(alts) = q.kind() {
+                                            Some(alts.iter().map(|alt| alt.name().to_string()).collect::<Vec<_>>())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .flatten()
+                                    .collect();
 
-                            vec![derive_wizard::interview::Question::new(
-                                Some(#field_name.to_string()),
-                                #field_name.to_string(),
-                                #prompt.to_string(),
-                                derive_wizard::interview::QuestionKind::MultiSelect(
-                                    derive_wizard::interview::MultiSelectQuestion {
-                                        options,
-                                        defaults: vec![],
-                                    }
-                                ),
-                            )]
-                        }
-                    };
-                }
-
-                // Check if this is a Sequence (nested Wizard marker)
-                if matches!(question.kind(), QuestionKind::Sequence(seq) if seq.is_empty()) {
-                    // Generate code to call FieldType::interview() and prefix the nested questions
-                    quote! {
-                        {
-                            let mut nested_interview = <#field_ty as derive_wizard::Wizard>::interview();
-                            // Prefix all nested question names
-                            for question in &mut nested_interview.sections {
-                                let old_name = question.name().to_string();
-                                let new_name = format!("{}.{}", #field_name, old_name);
-                                *question = derive_wizard::interview::Question::new(
-                                    Some(new_name.clone()),
-                                    new_name,
-                                    question.prompt().to_string(),
-                                    question.kind().clone(),
-                                );
+                                vec![derive_wizard::interview::Question::new(
+                                    Some(#field_name.to_string()),
+                                    #field_name.to_string(),
+                                    #prompt.to_string(),
+                                    derive_wizard::interview::QuestionKind::MultiSelect(
+                                        derive_wizard::interview::MultiSelectQuestion {
+                                            options,
+                                            defaults: vec![],
+                                        }
+                                    ),
+                                )]
                             }
-                            nested_interview.sections
+                        };
+                    }
+
+                    // Check if this is a Sequence (nested Wizard marker)
+                    if matches!(question.kind(), QuestionKind::Sequence(seq) if seq.is_empty()) {
+                        // Generate code to call FieldType::interview() and prefix the nested questions
+                        quote! {
+                            {
+                                let mut nested_interview = <#field_ty as derive_wizard::Wizard>::interview();
+                                // Prefix all nested question names
+                                for question in &mut nested_interview.sections {
+                                    let old_name = question.name().to_string();
+                                    let new_name = format!("{}.{}", #field_name, old_name);
+                                    *question = derive_wizard::interview::Question::new(
+                                        Some(new_name.clone()),
+                                        new_name,
+                                        question.prompt().to_string(),
+                                        question.kind().clone(),
+                                    );
+                                }
+                                nested_interview.sections
+                            }
+                        }
+                    } else {
+                        // Regular question
+                        let q_code = generate_question_code(question);
+                        quote! { vec![#q_code] }
+                    }
+                }).collect()
+            } else {
+                interview
+                    .sections
+                    .iter()
+                    .map(|q| {
+                        let q_code = generate_question_code(q);
+                        quote! { vec![#q_code] }
+                    })
+                    .collect()
+            }
+        }
+        Data::Enum(enum_data) => {
+            // For enums, we need to generate runtime code to expand nested wizard fields
+            // within each variant's Alternative
+            let variant_builders: Vec<_> = enum_data.variants.iter().map(|variant| {
+                let variant_name = variant.ident.to_string();
+
+                match &variant.fields {
+                    Fields::Unit => {
+                        // Unit variant - no fields
+                        quote! {
+                            derive_wizard::interview::Question::new(
+                                Some(#variant_name.to_string()),
+                                #variant_name.to_string(),
+                                #variant_name.to_string(),
+                                derive_wizard::interview::QuestionKind::Alternative(0, vec![]),
+                            )
                         }
                     }
-                } else {
-                    // Regular question
-                    let q_code = generate_question_code(question);
-                    quote! { vec![#q_code] }
+                    Fields::Named(fields) => {
+                        // Generate field builders that handle nested wizards
+                        let field_builders: Vec<_> = fields.named.iter().map(|field| {
+                            let field_name = field.ident.as_ref().unwrap().to_string();
+                            let field_ty = &field.ty;
+                            let attrs = FieldAttrs::extract(&field.attrs, &field_name);
+
+                            // Check if this is a nested wizard type
+                            let is_nested = attrs.has_explicit_prompt
+                                && !is_builtin_type(field_ty)
+                                && !is_vec_of_enum(field_ty)
+                                && !attrs.mask
+                                && !attrs.multiline;
+
+                            if is_nested {
+                                // Nested wizard - expand at runtime
+                                let prompt = &attrs.prompt;
+                                quote! {
+                                    {
+                                        let nested_interview = <#field_ty as derive_wizard::Wizard>::interview();
+                                        // For nested enums, we need to prefix the alternatives
+                                        nested_interview.sections.into_iter().map(|mut q| {
+                                            let old_name = q.name().to_string();
+                                            let new_name = format!("{}.{}", #field_name, old_name);
+                                            derive_wizard::interview::Question::new(
+                                                Some(new_name.clone()),
+                                                new_name,
+                                                if old_name == "alternatives" { #prompt.to_string() } else { q.prompt().to_string() },
+                                                q.kind().clone(),
+                                            )
+                                        }).collect::<Vec<_>>()
+                                    }
+                                }
+                            } else {
+                                // Regular field - generate static question
+                                let kind_code = generate_field_kind_code(field_ty, &attrs);
+                                let prompt = &attrs.prompt;
+                                quote! {
+                                    vec![derive_wizard::interview::Question::new(
+                                        Some(#field_name.to_string()),
+                                        #field_name.to_string(),
+                                        #prompt.to_string(),
+                                        #kind_code,
+                                    )]
+                                }
+                            }
+                        }).collect();
+
+                        quote! {
+                            {
+                                let mut fields = Vec::new();
+                                #(fields.extend(#field_builders);)*
+                                derive_wizard::interview::Question::new(
+                                    Some(#variant_name.to_string()),
+                                    #variant_name.to_string(),
+                                    #variant_name.to_string(),
+                                    derive_wizard::interview::QuestionKind::Alternative(0, fields),
+                                )
+                            }
+                        }
+                    }
+                    Fields::Unnamed(fields) => {
+                        // Tuple variant - handle similarly
+                        let field_builders: Vec<_> = fields.unnamed.iter().enumerate().map(|(i, field)| {
+                            let field_name = format!("field_{}", i);
+                            let field_ty = &field.ty;
+                            let attrs = FieldAttrs::extract(&field.attrs, &field_name);
+
+                            let is_nested = attrs.has_explicit_prompt
+                                && !is_builtin_type(field_ty)
+                                && !is_vec_of_enum(field_ty)
+                                && !attrs.mask
+                                && !attrs.multiline;
+
+                            if is_nested {
+                                let prompt = &attrs.prompt;
+                                quote! {
+                                    {
+                                        let nested_interview = <#field_ty as derive_wizard::Wizard>::interview();
+                                        nested_interview.sections.into_iter().map(|mut q| {
+                                            let old_name = q.name().to_string();
+                                            let new_name = format!("{}.{}", #field_name, old_name);
+                                            derive_wizard::interview::Question::new(
+                                                Some(new_name.clone()),
+                                                new_name,
+                                                if old_name == "alternatives" { #prompt.to_string() } else { q.prompt().to_string() },
+                                                q.kind().clone(),
+                                            )
+                                        }).collect::<Vec<_>>()
+                                    }
+                                }
+                            } else {
+                                let kind_code = generate_field_kind_code(field_ty, &attrs);
+                                let prompt = &attrs.prompt;
+                                quote! {
+                                    vec![derive_wizard::interview::Question::new(
+                                        Some(#field_name.to_string()),
+                                        #field_name.to_string(),
+                                        #prompt.to_string(),
+                                        #kind_code,
+                                    )]
+                                }
+                            }
+                        }).collect();
+
+                        quote! {
+                            {
+                                let mut fields = Vec::new();
+                                #(fields.extend(#field_builders);)*
+                                derive_wizard::interview::Question::new(
+                                    Some(#variant_name.to_string()),
+                                    #variant_name.to_string(),
+                                    #variant_name.to_string(),
+                                    derive_wizard::interview::QuestionKind::Alternative(0, fields),
+                                )
+                            }
+                        }
+                    }
                 }
-            }).collect()
-        } else {
+            }).collect();
+
+            // Build the enum as a single Sequence of Alternatives
+            vec![quote! {
+                vec![derive_wizard::interview::Question::new(
+                    Some("alternatives".to_string()),
+                    "alternatives".to_string(),
+                    "Select variant:".to_string(),
+                    derive_wizard::interview::QuestionKind::Sequence(vec![#(#variant_builders),*]),
+                )]
+            }]
+        }
+        _ => {
             interview
                 .sections
                 .iter()
@@ -691,15 +917,6 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
                 })
                 .collect()
         }
-    } else {
-        interview
-            .sections
-            .iter()
-            .map(|q| {
-                let q_code = generate_question_code(q);
-                quote! { vec![#q_code] }
-            })
-            .collect()
     };
 
     quote! {

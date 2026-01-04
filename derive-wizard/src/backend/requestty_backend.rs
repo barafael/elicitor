@@ -6,7 +6,7 @@ use crate::{AnswerValue, Answers};
 pub struct RequesttyBackend;
 
 impl RequesttyBackend {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 

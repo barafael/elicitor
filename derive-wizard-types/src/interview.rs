@@ -27,7 +27,7 @@ pub struct Question {
 
 impl Question {
     /// Create a new question with the given id, name, prompt, and kind.
-    pub fn new(id: Option<String>, name: String, prompt: String, kind: QuestionKind) -> Self {
+    pub const fn new(id: Option<String>, name: String, prompt: String, kind: QuestionKind) -> Self {
         Self {
             id,
             name,
@@ -49,15 +49,15 @@ impl Question {
         &self.prompt
     }
 
-    pub fn kind(&self) -> &QuestionKind {
+    pub const fn kind(&self) -> &QuestionKind {
         &self.kind
     }
 
-    pub fn kind_mut(&mut self) -> &mut QuestionKind {
+    pub const fn kind_mut(&mut self) -> &mut QuestionKind {
         &mut self.kind
     }
 
-    pub fn assumed(&self) -> Option<&AssumedAnswer> {
+    pub const fn assumed(&self) -> Option<&AssumedAnswer> {
         self.assumed.as_ref()
     }
 
@@ -121,9 +121,9 @@ pub enum QuestionKind {
 impl QuestionKind {
     /// Check if this is a Sequence containing only Alternative items (i.e., enum variants).
     pub fn is_enum_alternatives(&self) -> bool {
-        matches!(self, QuestionKind::Sequence(questions)
+        matches!(self, Self::Sequence(questions)
             if !questions.is_empty()
-                && questions.iter().all(|q| matches!(q.kind(), QuestionKind::Alternative(_, _))))
+                && questions.iter().all(|q| matches!(q.kind(), Self::Alternative(_, _))))
     }
 }
 

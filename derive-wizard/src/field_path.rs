@@ -9,7 +9,7 @@ pub struct FieldPath {
 
 impl FieldPath {
     /// Create a new field path from segments.
-    pub fn new(segments: Vec<String>) -> Self {
+    pub const fn new(segments: Vec<String>) -> Self {
         Self { segments }
     }
 
@@ -31,7 +31,7 @@ impl FieldPath {
     }
 
     /// Get the depth of this path (number of segments).
-    pub fn depth(&self) -> usize {
+    pub const fn depth(&self) -> usize {
         self.segments.len()
     }
 }
@@ -50,7 +50,7 @@ impl From<&str> for FieldPath {
 
 impl From<String> for FieldPath {
     fn from(s: String) -> Self {
-        FieldPath::from(s.as_str())
+        Self::from(s.as_str())
     }
 }
 

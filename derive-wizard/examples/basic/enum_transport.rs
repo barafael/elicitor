@@ -1,5 +1,13 @@
 use derive_wizard::Wizard;
 
+/// Bike type - Road or Mountain
+#[derive(Debug, Wizard)]
+enum BikeType {
+    Road,
+    Mountain,
+}
+
+/// Different modes of transportation
 #[derive(Debug, Wizard)]
 #[allow(unused)]
 enum Transport {
@@ -12,10 +20,10 @@ enum Transport {
     },
 
     Bicycle {
-        #[prompt("Type (road/mountain):")]
-        bike_type: String,
+        #[prompt("Bike type:")]
+        typ: BikeType,
 
-        #[prompt("Gears:")]
+        #[prompt("Number of gears:")]
         gears: u8,
     },
 
@@ -24,5 +32,5 @@ enum Transport {
 
 fn main() {
     let transport = Transport::wizard_builder().build().unwrap();
-    println!("{:#?}", transport);
+    println!("Transport: {:#?}", transport);
 }

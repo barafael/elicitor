@@ -9,24 +9,24 @@ pub enum AssumedAnswer {
 
 impl From<String> for AssumedAnswer {
     fn from(v: String) -> Self {
-        AssumedAnswer::String(v)
+        Self::String(v)
     }
 }
 
 impl From<i64> for AssumedAnswer {
     fn from(v: i64) -> Self {
-        AssumedAnswer::Int(v)
+        Self::Int(v)
     }
 }
 
 impl From<f64> for AssumedAnswer {
     fn from(v: f64) -> Self {
-        AssumedAnswer::Float(v)
+        Self::Float(v)
     }
 }
 
 impl From<bool> for AssumedAnswer {
     fn from(v: bool) -> Self {
-        AssumedAnswer::Bool(v)
+        Self::Bool(v)
     }
 }

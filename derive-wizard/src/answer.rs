@@ -42,7 +42,7 @@ impl Answers {
         self.values.get(key)
     }
 
-    pub fn merge(&mut self, other: Answers) {
+    pub fn merge(&mut self, other: Self) {
         self.values.extend(other.values);
     }
 
@@ -90,7 +90,7 @@ impl Answers {
         }
     }
 
-    pub fn as_nested(&self, key: &str) -> Result<&Answers, AnswerError> {
+    pub fn as_nested(&self, key: &str) -> Result<&Self, AnswerError> {
         match self.get(key) {
             Some(AnswerValue::Nested(nested)) => Ok(nested),
             Some(_) => Err(AnswerError::TypeMismatch {
@@ -123,10 +123,10 @@ impl From<&derive_wizard_types::AssumedAnswer> for AnswerValue {
     fn from(assumed: &derive_wizard_types::AssumedAnswer) -> Self {
         use derive_wizard_types::AssumedAnswer;
         match assumed {
-            AssumedAnswer::String(s) => AnswerValue::String(s.clone()),
-            AssumedAnswer::Int(i) => AnswerValue::Int(*i),
-            AssumedAnswer::Float(f) => AnswerValue::Float(*f),
-            AssumedAnswer::Bool(b) => AnswerValue::Bool(*b),
+            AssumedAnswer::String(s) => Self::String(s.clone()),
+            AssumedAnswer::Int(i) => Self::Int(*i),
+            AssumedAnswer::Float(f) => Self::Float(*f),
+            AssumedAnswer::Bool(b) => Self::Bool(*b),
         }
     }
 }
