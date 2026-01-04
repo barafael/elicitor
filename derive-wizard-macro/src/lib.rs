@@ -474,11 +474,16 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
 
 /// Generate the QuestionKind code for a field (used for enum variant fields)
 fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::TokenStream {
+    let validate = attrs
+        .validate
+        .as_ref()
+        .map_or_else(|| quote!(None), |v| quote!(Some(#v.to_string())));
+
     if attrs.mask {
         return quote! {
             derive_wizard::interview::QuestionKind::Masked(derive_wizard::interview::MaskedQuestion {
                 mask: Some('*'),
-                validate: None,
+                validate: #validate,
             })
         };
     }
@@ -487,7 +492,7 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
         return quote! {
             derive_wizard::interview::QuestionKind::Multiline(derive_wizard::interview::MultilineQuestion {
                 default: None,
-                validate: None,
+                validate: #validate,
             })
         };
     }
@@ -496,7 +501,7 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
         Some("String") | Some("PathBuf") => quote! {
             derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
                 default: None,
-                validate: None,
+                validate: #validate,
             })
         },
         Some("bool") => quote! {
@@ -516,7 +521,7 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
                     default: None,
                     min: #min,
                     max: #max,
-                    validate: None,
+                    validate: #validate,
                 })
             }
         }
@@ -532,14 +537,14 @@ fn generate_field_kind_code(ty: &Type, attrs: &FieldAttrs) -> proc_macro2::Token
                     default: None,
                     min: #min,
                     max: #max,
-                    validate: None,
+                    validate: #validate,
                 })
             }
         }
         _ => quote! {
             derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
                 default: None,
-                validate: None,
+                validate: #validate,
             })
         },
     }
