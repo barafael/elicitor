@@ -60,7 +60,8 @@ impl DialoguerBackend {
                 answers.insert(id.to_string(), AnswerValue::String(answer));
             }
             QuestionKind::Int(int_q) => {
-                let mut input = dialoguer::Input::<i64>::new().with_prompt(question.prompt());
+                let mut input = dialoguer::Input::<i64>::new()
+                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
 
                 if let Some(default) = int_q.default {
                     input = input.default(default);
@@ -92,7 +93,8 @@ impl DialoguerBackend {
                 answers.insert(id.to_string(), AnswerValue::Int(answer));
             }
             QuestionKind::Float(float_q) => {
-                let mut input = dialoguer::Input::<f64>::new().with_prompt(question.prompt());
+                let mut input = dialoguer::Input::<f64>::new()
+                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
 
                 if let Some(default) = float_q.default {
                     input = input.default(default);
