@@ -51,8 +51,6 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
     };
 
     TokenStream::from(quote! {
-        // Compile-time check: ensure the runtime Answers type provides `iter()`.
-        // This prevents macro/runtime version skew from compiling silently.
         #[allow(dead_code)]
         const _: fn(&derive_wizard::Answers) = |answers: &derive_wizard::Answers| {
             let _ = answers.iter();
@@ -158,28 +156,8 @@ fn build_question(
 
     // Check if this is a custom type (potential nested Wizard)
     let field_ty = &field.ty;
-    let type_str = quote!(#field_ty).to_string();
-    let is_custom_type = !matches!(
-        type_str.as_str(),
-        "String"
-            | "bool"
-            | "i8"
-            | "i16"
-            | "i32"
-            | "i64"
-            | "i128"
-            | "isize"
-            | "u8"
-            | "u16"
-            | "u32"
-            | "u64"
-            | "u128"
-            | "usize"
-            | "f32"
-            | "f64"
-            | "PathBuf"
-    ) && !attrs.mask
-        && !attrs.multiline;
+    let is_builtin = is_builtin_type(field_ty);
+    let is_custom_type = !is_builtin && !attrs.mask && !attrs.multiline;
 
     if is_custom_type {
         // For custom types, we assume they might be Wizards and need to expand their fields
@@ -198,6 +176,65 @@ fn build_question(
             kind,
         )]
     }
+}
+
+fn type_ident_name(ty: &Type) -> Option<String> {
+    match ty {
+        Type::Path(tp) if tp.qself.is_none() => tp
+            .path
+            .segments
+            .last()
+            .map(|segment| segment.ident.to_string()),
+        _ => None,
+    }
+}
+
+fn is_integer_type(ty: &Type) -> bool {
+    matches!(
+        type_ident_name(ty).as_deref(),
+        Some(
+            "i8" | "i16"
+                | "i32"
+                | "i64"
+                | "i128"
+                | "isize"
+                | "u8"
+                | "u16"
+                | "u32"
+                | "u64"
+                | "u128"
+                | "usize"
+        )
+    )
+}
+
+fn is_float_type(ty: &Type) -> bool {
+    matches!(type_ident_name(ty).as_deref(), Some("f32" | "f64"))
+}
+
+fn is_builtin_type(ty: &Type) -> bool {
+    matches!(
+        type_ident_name(ty).as_deref(),
+        Some(
+            "String"
+                | "bool"
+                | "PathBuf"
+                | "i8"
+                | "i16"
+                | "i32"
+                | "i64"
+                | "i128"
+                | "isize"
+                | "u8"
+                | "u16"
+                | "u32"
+                | "u64"
+                | "u128"
+                | "usize"
+                | "f32"
+                | "f64"
+        )
+    )
 }
 
 struct FieldAttrs {
@@ -246,37 +283,32 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
         });
     }
 
-    match quote!(#ty).to_string().as_str() {
-        "String" => QuestionKind::Input(InputQuestion {
+    match type_ident_name(ty).as_deref() {
+        Some("String") => QuestionKind::Input(InputQuestion {
             default: None,
             validate: attrs.validate.clone(),
         }),
-        "bool" => QuestionKind::Confirm(ConfirmQuestion { default: false }),
-        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128"
-        | "usize" => QuestionKind::Int(IntQuestion {
+        Some("bool") => QuestionKind::Confirm(ConfirmQuestion { default: false }),
+        Some(_) if is_integer_type(ty) => QuestionKind::Int(IntQuestion {
             default: None,
             min: attrs.min_int,
             max: attrs.max_int,
             validate: attrs.validate.clone(),
         }),
-        "f32" | "f64" => QuestionKind::Float(FloatQuestion {
+        Some(_) if is_float_type(ty) => QuestionKind::Float(FloatQuestion {
             default: None,
             min: attrs.min_float,
             max: attrs.max_float,
             validate: attrs.validate.clone(),
         }),
-        "PathBuf" => QuestionKind::Input(InputQuestion {
+        Some("PathBuf") => QuestionKind::Input(InputQuestion {
             default: None,
             validate: attrs.validate.clone(),
         }),
-        _type_path => {
-            // For nested types, we'll need to handle them at the interview generation level
-            // For now, default to Input for unknown types
-            QuestionKind::Input(InputQuestion {
-                default: None,
-                validate: attrs.validate.clone(),
-            })
-        }
+        _ => QuestionKind::Input(InputQuestion {
+            default: None,
+            validate: attrs.validate.clone(),
+        }),
     }
 }
 
@@ -683,32 +715,35 @@ fn generate_from_answers_enum(name: &syn::Ident, data: &syn::DataEnum) -> proc_m
 }
 
 fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::TokenStream {
-    match quote!(#ty).to_string().as_str() {
-        "String" => quote! { answers.as_string(#field_name)? },
-        "bool" => quote! { answers.as_bool(#field_name)? },
-        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128"
-        | "usize" => {
-            quote! { answers.as_int(#field_name)? as #ty }
+    if let Some(type_name) = type_ident_name(ty) {
+        match type_name.as_str() {
+            "String" => return quote! { answers.as_string(#field_name)? },
+            "bool" => return quote! { answers.as_bool(#field_name)? },
+            "PathBuf" => {
+                return quote! { std::path::PathBuf::from(answers.as_string(#field_name)?) };
+            }
+            _ => {}
         }
-        "f32" | "f64" => quote! { answers.as_float(#field_name)? as #ty },
-        "PathBuf" => quote! { std::path::PathBuf::from(answers.as_string(#field_name)?) },
-        type_str => {
-            // For nested Wizard types, create a filtered answer set with prefixes stripped
-            let type_ident = syn::parse_str::<syn::Ident>(type_str).unwrap();
-            let prefix = format!("{}.", field_name);
-            quote! {
-                {
-                    // Filter answers that start with this field's prefix and strip the prefix
-                    let mut nested_answers = derive_wizard::Answers::default();
-                    let prefix = #prefix;
-                    for (key, value) in answers.iter() {
-                        if let Some(stripped) = key.strip_prefix(prefix) {
-                            nested_answers.insert(stripped.to_string(), value.clone());
-                        }
-                    }
-                    #type_ident::from_answers(&nested_answers)?
+
+        if is_integer_type(ty) {
+            return quote! { answers.as_int(#field_name)? as #ty };
+        }
+
+        if is_float_type(ty) {
+            return quote! { answers.as_float(#field_name)? as #ty };
+        }
+    }
+
+    quote! {
+        {
+            let mut nested_answers = derive_wizard::Answers::default();
+            let prefix = format!("{}.", #field_name);
+            for (key, value) in answers.iter() {
+                if let Some(stripped) = key.strip_prefix(&prefix) {
+                    nested_answers.insert(stripped.to_string(), value.clone());
                 }
             }
+            <#ty as derive_wizard::Wizard>::from_answers(&nested_answers)?
         }
     }
 }
@@ -774,11 +809,11 @@ fn generate_interview_with_suggestions_struct(
 
             // Generate the suggested value based on field type
             match question.kind() {
-                QuestionKind::Input(_) => match quote!(#field_type).to_string().as_str() {
-                    "String" => Some(quote! {
+                QuestionKind::Input(_) => match type_ident_name(field_type).as_deref() {
+                    Some("String") => Some(quote! {
                         interview.sections[#i].set_suggestion(self.#field_name.clone());
                     }),
-                    "PathBuf" => Some(quote! {
+                    Some("PathBuf") => Some(quote! {
                         interview.sections[#i].set_suggestion(self.#field_name.display().to_string());
                     }),
                     _ => None,
