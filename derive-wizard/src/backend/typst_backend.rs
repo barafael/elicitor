@@ -153,6 +153,20 @@ impl TypstBackend {
                     self.generate_question_markup(markup, alt, prefix);
                 }
             }
+            QuestionKind::MultiSelect(multi_q) => {
+                // Multi-select - show as checkboxes
+                markup.push_str(&format!("*{}* _(select all that apply)_\n\n", question.prompt()));
+                
+                for option in &multi_q.options {
+                    markup.push_str("#grid(\n");
+                    markup.push_str("  columns: (auto, 1fr),\n");
+                    markup.push_str("  gutter: 0.5em,\n");
+                    markup.push_str("  box(width: 1em, height: 1em, stroke: 0.5pt + black),\n");
+                    markup.push_str(&format!("  [{}]\n", option));
+                    markup.push_str(")\n");
+                }
+                markup.push_str("\n");
+            }
         }
     }
 

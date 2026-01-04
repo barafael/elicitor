@@ -101,6 +101,9 @@ fn generate_question_markup(markup: &mut String, question: &Question) {
                 generate_question_markup(markup, alt);
             }
         }
+        QuestionKind::MultiSelect(multi_q) => {
+            generate_multi_select(markup, question, &multi_q.options);
+        }
     }
 }
 
@@ -275,6 +278,41 @@ fn generate_enum(markup: &mut String, question: &Question, variants: &[Question]
             }
             markup.push_str("  ]\n");
         }
+    }
+    markup.push_str("]\n\n");
+}
+
+fn generate_multi_select(markup: &mut String, question: &Question, options: &[String]) {
+    markup.push_str("#block(spacing: 0.4em)[\n");
+    let prompt = escape_typst_text(question.prompt());
+    let prompt_with_suffix = if prompt.ends_with(':') || prompt.ends_with('?') {
+        prompt
+    } else {
+        format!("{} (select all that apply):", prompt)
+    };
+    markup.push_str(&format!("  #text(size: 10pt)[{}]\n", prompt_with_suffix));
+    markup.push_str("  #v(0.15em)\n");
+
+    for (idx, option) in options.iter().enumerate() {
+        if idx > 0 {
+            markup.push_str("  #v(0.2em)\n");
+        }
+
+        // Checkbox (square)
+        markup.push_str("  #grid(\n");
+        markup.push_str("    columns: (auto, 1fr),\n");
+        markup.push_str("    gutter: 0.4em,\n");
+        markup.push_str("    align: (left + horizon, left + horizon),\n");
+        markup.push_str("    box(\n");
+        markup.push_str("      width: 1.2em,\n");
+        markup.push_str("      height: 1.2em,\n");
+        markup.push_str("      stroke: 0.5pt + black,\n");
+        markup.push_str("    )[],\n");
+        markup.push_str(&format!(
+            "    text(size: 10pt)[{}]\n",
+            escape_typst_text(option)
+        ));
+        markup.push_str("  )\n");
     }
     markup.push_str("]\n\n");
 }

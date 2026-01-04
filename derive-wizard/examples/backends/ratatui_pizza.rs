@@ -24,7 +24,7 @@ enum Crust {
     Stuffed,
 }
 
-#[derive(Debug, Wizard)]
+#[derive(Debug, Clone, Copy, Wizard)]
 #[allow(dead_code)]
 enum Topping {
     Pepperoni,
@@ -35,6 +35,21 @@ enum Topping {
     Sausage,
     Bacon,
     Pineapple,
+}
+
+impl std::fmt::Display for Topping {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Topping::Pepperoni => write!(f, "Pepperoni"),
+            Topping::Mushrooms => write!(f, "Mushrooms"),
+            Topping::Olives => write!(f, "Black Olives"),
+            Topping::Peppers => write!(f, "Bell Peppers"),
+            Topping::ExtraCheese => write!(f, "Extra Cheese"),
+            Topping::Sausage => write!(f, "Italian Sausage"),
+            Topping::Bacon => write!(f, "Bacon"),
+            Topping::Pineapple => write!(f, "Pineapple 🍍"),
+        }
+    }
 }
 
 #[derive(Debug, Wizard)]
@@ -64,11 +79,8 @@ struct PizzaOrder {
     #[prompt("Choose your crust:")]
     crust: Crust,
 
-    #[prompt("Pick a topping:")]
-    topping1: Topping,
-
-    #[prompt("Add another topping?")]
-    extra_topping: bool,
+    #[prompt("Choose your toppings:")]
+    toppings: Vec<Topping>,
 
     #[prompt("How many pizzas?")]
     #[min(1)]
@@ -101,7 +113,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n🧾 Order Summary:");
     println!("═══════════════════════════════════════");
-    println!("{:#?}", order);
+    println!("Customer: {}", order.customer.name);
+    println!("Phone: {}", order.customer.phone);
+    println!("Address: {}", order.customer.address);
+    println!("Size: {:?} | Crust: {:?}", order.size, order.crust);
+
+    if order.toppings.is_empty() {
+        println!("Toppings: Plain cheese");
+    } else {
+        println!("Toppings ({}):", order.toppings.len());
+        for topping in &order.toppings {
+            println!("  • {}", topping);
+        }
+    }
+
+    println!("Quantity: {}", order.quantity);
+    if !order.instructions.is_empty() {
+        println!("Instructions: {}", order.instructions);
+    }
 
     Ok(())
 }

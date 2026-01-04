@@ -110,6 +110,9 @@ pub enum QuestionKind {
     /// A yes/no confirmation question.
     Confirm(ConfirmQuestion),
 
+    /// A multi-select question where users can pick multiple options.
+    MultiSelect(MultiSelectQuestion),
+
     Sequence(Vec<Question>),
 
     Alternative(usize, Vec<Question>),
@@ -182,4 +185,14 @@ pub struct FloatQuestion {
 pub struct ConfirmQuestion {
     /// Default value (true for yes, false for no)
     pub default: bool,
+}
+
+/// Configuration for a multi-select question.
+#[derive(Debug, Clone)]
+pub struct MultiSelectQuestion {
+    /// The options to choose from.
+    pub options: Vec<String>,
+
+    /// Default selected indices.
+    pub defaults: Vec<usize>,
 }

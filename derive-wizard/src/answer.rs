@@ -23,6 +23,8 @@ pub enum AnswerValue {
     Float(f64),
     Bool(bool),
     Nested(Box<Answers>),
+    /// List of selected indices (for multi-select questions)
+    IntList(Vec<i64>),
 }
 
 impl Answers {
@@ -94,6 +96,18 @@ impl Answers {
             Some(_) => Err(AnswerError::TypeMismatch {
                 key: key.to_string(),
                 expected: "Nested",
+            }),
+            None => Err(AnswerError::MissingKey(key.to_string())),
+        }
+    }
+
+    /// Get a list of integers (for multi-select answers)
+    pub fn as_int_list(&self, key: &str) -> Result<Vec<i64>, AnswerError> {
+        match self.get(key) {
+            Some(AnswerValue::IntList(list)) => Ok(list.clone()),
+            Some(_) => Err(AnswerError::TypeMismatch {
+                key: key.to_string(),
+                expected: "IntList",
             }),
             None => Err(AnswerError::MissingKey(key.to_string())),
         }

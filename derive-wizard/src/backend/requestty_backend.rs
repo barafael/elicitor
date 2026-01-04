@@ -331,6 +331,28 @@ impl RequesttyBackend {
                     answers.insert(id.to_string(), AnswerValue::Bool(b));
                 }
             }
+            QuestionKind::MultiSelect(multi_q) => {
+                // Build choices with default selections marked
+                let choices: Vec<_> = multi_q.options.iter().enumerate()
+                    .map(|(idx, opt)| {
+                        let selected = multi_q.defaults.contains(&idx);
+                        (opt.clone(), selected)
+                    })
+                    .collect();
+
+                let q = requestty::Question::multi_select(id)
+                    .message(question.prompt())
+                    .choices_with_default(choices)
+                    .build();
+
+                let answer = requestty::prompt_one(q)
+                    .map_err(|e| BackendError::ExecutionError(format!("Failed to prompt: {e}")))?;
+
+                if let requestty::Answer::ListItems(items) = answer {
+                    let indices: Vec<i64> = items.into_iter().map(|item| item.index as i64).collect();
+                    answers.insert(id.to_string(), AnswerValue::IntList(indices));
+                }
+            }
             QuestionKind::Sequence(questions) => {
                 // Check if this is an enum alternatives sequence
                 // (all items are Alternative questions)

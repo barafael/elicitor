@@ -5,7 +5,7 @@ use syn::{Data, Fields, Lit, Meta, Type, parse_macro_input};
 
 use derive_wizard_types::interview::{
     ConfirmQuestion, FloatQuestion, InputQuestion, IntQuestion, Interview, MaskedQuestion,
-    MultilineQuestion, Question, QuestionKind,
+    MultiSelectQuestion, MultilineQuestion, Question, QuestionKind,
 };
 
 #[proc_macro_derive(
@@ -283,9 +283,13 @@ fn build_question(
     };
 
     // Detect nested Wizard types: non-builtin type with explicit #[prompt] attribute
+    // Vec<EnumType> fields are multi-select, not nested wizards
     let field_ty = &field.ty;
-    let is_nested =
-        attrs.has_explicit_prompt && !is_builtin_type(field_ty) && !attrs.mask && !attrs.multiline;
+    let is_nested = attrs.has_explicit_prompt
+        && !is_builtin_type(field_ty)
+        && !is_vec_of_enum(field_ty)
+        && !attrs.mask
+        && !attrs.multiline;
 
     if is_nested {
         // Nested Wizard type - will be expanded at runtime
@@ -364,6 +368,31 @@ fn is_builtin_type(ty: &Type) -> bool {
     )
 }
 
+/// Check if a type is Vec<T> and return the inner type T if so
+fn extract_vec_inner_type(ty: &Type) -> Option<&Type> {
+    if let Type::Path(type_path) = ty {
+        let last_segment = type_path.path.segments.last()?;
+        if last_segment.ident == "Vec" {
+            if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
+                if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+                    return Some(inner_ty);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Check if a type is a Vec<T> where T is a non-builtin (likely an enum)
+fn is_vec_of_enum(ty: &Type) -> bool {
+    if let Some(inner) = extract_vec_inner_type(ty) {
+        // If inner type is not a builtin, it's likely an enum that implements Wizard
+        !is_builtin_type(inner)
+    } else {
+        false
+    }
+}
+
 struct FieldAttrs {
     prompt: String,
     has_explicit_prompt: bool,
@@ -409,6 +438,15 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
         return QuestionKind::Multiline(MultilineQuestion {
             default: None,
             validate: attrs.validate.clone(),
+        });
+    }
+
+    // Check for Vec<EnumType> for multi-select
+    if is_vec_of_enum(ty) {
+        // The options will be populated at runtime from the enum's variants
+        return QuestionKind::MultiSelect(MultiSelectQuestion {
+            options: vec![], // Will be filled at runtime
+            defaults: vec![],
         });
     }
 
@@ -588,6 +626,42 @@ fn generate_interview_code(interview: &Interview, data: &Data) -> proc_macro2::T
                 let field_ty = &field.ty;
                 let field_name = field.ident.as_ref().unwrap().to_string();
 
+                // Check if this is a Vec<EnumType> (MultiSelect)
+                if matches!(question.kind(), QuestionKind::MultiSelect(_)) {
+                    if let Some(inner_ty) = extract_vec_inner_type(field_ty) {
+                        let prompt = question.prompt();
+                        // Generate code that gets variant names from the inner enum's interview
+                        return quote! {
+                            {
+                                let inner_interview = <#inner_ty as derive_wizard::Wizard>::interview();
+                                // Extract variant names from the enum's alternatives
+                                let options: Vec<String> = inner_interview.sections.iter()
+                                    .filter_map(|q| {
+                                        if let derive_wizard::interview::QuestionKind::Sequence(alts) = q.kind() {
+                                            Some(alts.iter().map(|alt| alt.name().to_string()).collect::<Vec<_>>())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .flatten()
+                                    .collect();
+
+                                vec![derive_wizard::interview::Question::new(
+                                    Some(#field_name.to_string()),
+                                    #field_name.to_string(),
+                                    #prompt.to_string(),
+                                    derive_wizard::interview::QuestionKind::MultiSelect(
+                                        derive_wizard::interview::MultiSelectQuestion {
+                                            options,
+                                            defaults: vec![],
+                                        }
+                                    ),
+                                )]
+                            }
+                        };
+                    }
+                }
+
                 // Check if this is a Sequence (nested Wizard marker)
                 if matches!(question.kind(), QuestionKind::Sequence(seq) if seq.is_empty()) {
                     // Generate code to call FieldType::interview() and prefix the nested questions
@@ -765,6 +839,16 @@ fn generate_question_kind_code_impl(
                 })
             }
         }
+        QuestionKind::MultiSelect(q) => {
+            let options = &q.options;
+            let defaults = &q.defaults;
+            quote! {
+                derive_wizard::interview::QuestionKind::MultiSelect(derive_wizard::interview::MultiSelectQuestion {
+                    options: vec![#(#options.to_string()),*],
+                    defaults: vec![#(#defaults),*],
+                })
+            }
+        }
         QuestionKind::Sequence(questions) => {
             let question_codes = questions.iter().map(generate_question_code);
             quote! {
@@ -844,6 +928,29 @@ fn generate_from_answers_enum(name: &syn::Ident, data: &syn::DataEnum) -> proc_m
 }
 
 fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::TokenStream {
+    // Check for Vec<EnumType> for multi-select
+    if let Some(inner_ty) = extract_vec_inner_type(ty) {
+        if !is_builtin_type(inner_ty) {
+            // Vec of enum type - construct from selected indices
+            return quote! {
+                {
+                    let indices = answers.as_int_list(#field_name)?;
+                    indices.into_iter()
+                        .map(|idx| {
+                            // Create a temporary answers with just the alternative index
+                            let mut temp_answers = derive_wizard::Answers::default();
+                            temp_answers.insert(
+                                derive_wizard::SELECTED_ALTERNATIVE_KEY.to_string(),
+                                derive_wizard::AnswerValue::Int(idx),
+                            );
+                            <#inner_ty as derive_wizard::Wizard>::from_answers(&temp_answers)
+                        })
+                        .collect::<Result<Vec<_>, _>>()?
+                }
+            };
+        }
+    }
+
     if let Some(type_name) = type_ident_name(ty) {
         match type_name.as_str() {
             "String" => return quote! { answers.as_string(#field_name)? },
@@ -881,6 +988,7 @@ fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::Token
                     derive_wizard::AnswerValue::Float(f) => f.to_string(),
                     derive_wizard::AnswerValue::Bool(b) => b.to_string(),
                     derive_wizard::AnswerValue::Nested(_) => continue,
+                    derive_wizard::AnswerValue::IntList(_) => continue,
                 };
 
                 <#ty as derive_wizard::Wizard>::validate_field(
@@ -922,8 +1030,10 @@ fn generate_validate_field_method_struct(data: &syn::DataStruct) -> proc_macro2:
         }
 
         // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+        // Vec<EnumType> fields are multi-select, not nested wizards
         let is_nested = attrs.has_explicit_prompt
             && !is_builtin_type(field_ty)
+            && !is_vec_of_enum(field_ty)
             && !attrs.mask
             && !attrs.multiline;
         if is_nested {
@@ -985,8 +1095,10 @@ fn generate_validate_field_method_enum(data: &syn::DataEnum) -> proc_macro2::Tok
                     }
 
                     // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+                    // Vec<EnumType> fields are multi-select, not nested wizards
                     let is_nested = attrs.has_explicit_prompt
                         && !is_builtin_type(field_ty)
+                        && !is_vec_of_enum(field_ty)
                         && !attrs.mask
                         && !attrs.multiline;
                     if is_nested {
@@ -1014,8 +1126,10 @@ fn generate_validate_field_method_enum(data: &syn::DataEnum) -> proc_macro2::Tok
                     }
 
                     // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+                    // Vec<EnumType> fields are multi-select, not nested wizards
                     let is_nested = attrs.has_explicit_prompt
                         && !is_builtin_type(field_ty)
+                        && !is_vec_of_enum(field_ty)
                         && !attrs.mask
                         && !attrs.multiline;
                     if is_nested {

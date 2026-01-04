@@ -118,6 +118,8 @@ struct WizardState {
     cursor_pos: usize,
     /// For select/confirm questions
     selected_option: usize,
+    /// For multi-select questions: which options are selected
+    multi_selected: Vec<bool>,
     /// Current validation error message
     error_message: Option<String>,
     /// Whether wizard is complete
@@ -162,6 +164,10 @@ enum FlatQuestionKind {
         options: Vec<String>,
         default_idx: usize,
     },
+    MultiSelect {
+        options: Vec<String>,
+        defaults: Vec<usize>,
+    },
 }
 
 impl WizardState {
@@ -173,13 +179,35 @@ impl WizardState {
         } else {
             title
         };
+
+        // Initialize state for the first question
+        let (selected_option, multi_selected) = if let Some(first) = questions.first() {
+            match &first.kind {
+                FlatQuestionKind::MultiSelect { options, defaults } => {
+                    let mut selected = vec![false; options.len()];
+                    for &idx in defaults {
+                        if idx < selected.len() {
+                            selected[idx] = true;
+                        }
+                    }
+                    (0, selected)
+                }
+                FlatQuestionKind::Select { default_idx, .. } => (*default_idx, Vec::new()),
+                FlatQuestionKind::Confirm { default } => (if *default { 0 } else { 1 }, Vec::new()),
+                _ => (0, Vec::new()),
+            }
+        } else {
+            (0, Vec::new())
+        };
+
         Self {
             questions,
             current_index: 0,
             answers: Answers::new(),
             input: String::new(),
             cursor_pos: 0,
-            selected_option: 0,
+            selected_option,
+            multi_selected,
             error_message: None,
             complete: false,
             cancelled: false,
@@ -261,6 +289,18 @@ impl WizardState {
                         default_value: Some(
                             if confirm_q.default { "yes" } else { "no" }.to_string(),
                         ),
+                        assumed: question.assumed().cloned(),
+                    });
+                }
+                QuestionKind::MultiSelect(multi_q) => {
+                    flat.push(FlatQuestion {
+                        id,
+                        prompt: question.prompt().to_string(),
+                        kind: FlatQuestionKind::MultiSelect {
+                            options: multi_q.options.clone(),
+                            defaults: multi_q.defaults.clone(),
+                        },
+                        default_value: None,
                         assumed: question.assumed().cloned(),
                     });
                 }
@@ -434,6 +474,17 @@ impl WizardState {
                     AnswerValue::Int(self.selected_option as i64),
                 );
             }
+            FlatQuestionKind::MultiSelect { .. } => {
+                // Collect indices of all selected options
+                let selected_indices: Vec<i64> = self
+                    .multi_selected
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, &selected)| if selected { Some(i as i64) } else { None })
+                    .collect();
+                self.answers
+                    .insert(question.id.clone(), AnswerValue::IntList(selected_indices));
+            }
         }
 
         true
@@ -445,6 +496,7 @@ impl WizardState {
             self.input.clear();
             self.cursor_pos = 0;
             self.selected_option = 0;
+            self.multi_selected.clear();
             self.error_message = None;
 
             // Skip assumed questions
@@ -460,7 +512,7 @@ impl WizardState {
                         .insert(self.questions[self.current_index].id.clone(), value);
                     self.current_index += 1;
                 } else {
-                    // Set default selection for select/confirm questions
+                    // Set default selection for select/confirm/multiselect questions
                     if let Some(q) = self.current_question() {
                         match &q.kind {
                             FlatQuestionKind::Confirm { default } => {
@@ -468,6 +520,19 @@ impl WizardState {
                             }
                             FlatQuestionKind::Select { default_idx, .. } => {
                                 self.selected_option = *default_idx;
+                            }
+                            FlatQuestionKind::MultiSelect { options, defaults } => {
+                                // Copy values to avoid borrow issue
+                                let opts_len = options.len();
+                                let defs = defaults.clone();
+                                // Initialize multi_selected with defaults
+                                self.multi_selected = vec![false; opts_len];
+                                for idx in defs {
+                                    if idx < self.multi_selected.len() {
+                                        self.multi_selected[idx] = true;
+                                    }
+                                }
+                                self.selected_option = 0;
                             }
                             _ => {
                                 // Pre-fill with default value if available
@@ -493,6 +558,7 @@ impl WizardState {
             self.current_index -= 1;
             self.input.clear();
             self.cursor_pos = 0;
+            self.multi_selected.clear();
             self.error_message = None;
 
             // Restore previous answer as input
@@ -513,6 +579,17 @@ impl WizardState {
                         }
                         AnswerValue::Bool(b) => {
                             self.selected_option = if *b { 0 } else { 1 };
+                        }
+                        AnswerValue::IntList(indices) => {
+                            // Restore multi-select state
+                            if let FlatQuestionKind::MultiSelect { options, .. } = &q.kind {
+                                self.multi_selected = vec![false; options.len()];
+                                for &idx in indices {
+                                    if (idx as usize) < self.multi_selected.len() {
+                                        self.multi_selected[idx as usize] = true;
+                                    }
+                                }
+                            }
                         }
                         AnswerValue::Nested(_) => {
                             // Nested answers are handled through flattening,
@@ -738,6 +815,39 @@ fn draw_ui(frame: &mut Frame, state: &WizardState) {
                 list_state.select(Some(state.selected_option));
                 frame.render_stateful_widget(list, content_chunks[1], &mut list_state);
             }
+            FlatQuestionKind::MultiSelect { options, .. } => {
+                let items: Vec<ListItem> = options
+                    .iter()
+                    .enumerate()
+                    .map(|(i, opt)| {
+                        let is_selected = state.multi_selected.get(i).copied().unwrap_or(false);
+                        let checkbox = if is_selected { "[✓]" } else { "[ ]" };
+                        let style = if i == state.selected_option {
+                            Style::default().fg(state.theme.highlight).bold()
+                        } else if is_selected {
+                            Style::default().fg(state.theme.secondary)
+                        } else {
+                            Style::default().fg(state.theme.text)
+                        };
+                        ListItem::new(format!("  {} {}", checkbox, opt)).style(style)
+                    })
+                    .collect();
+
+                let selected_count = state.multi_selected.iter().filter(|&&x| x).count();
+                let list = List::new(items)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_style(Style::default().fg(state.theme.border))
+                            .title(format!(" Multi-Select ({} selected) ", selected_count))
+                            .title_style(Style::default().fg(state.theme.secondary)),
+                    )
+                    .highlight_symbol("► ");
+
+                let mut list_state = ListState::default();
+                list_state.select(Some(state.selected_option));
+                frame.render_stateful_widget(list, content_chunks[1], &mut list_state);
+            }
         }
 
         // Error message
@@ -753,6 +863,9 @@ fn draw_ui(frame: &mut Frame, state: &WizardState) {
     let help_text = match state.current_question().map(|q| &q.kind) {
         Some(FlatQuestionKind::Confirm { .. }) | Some(FlatQuestionKind::Select { .. }) => {
             "↑/↓: Select  Enter: Confirm  Esc: Cancel  ←: Back"
+        }
+        Some(FlatQuestionKind::MultiSelect { .. }) => {
+            "↑/↓: Navigate  Space: Toggle  Enter: Confirm  Esc: Cancel  ←: Back"
         }
         _ => "Enter: Submit  Esc: Cancel  ←: Back",
     };
@@ -879,6 +992,7 @@ impl InterviewBackend for RatatuiBackend {
                                 state.current_question().map(|q| &q.kind),
                                 Some(FlatQuestionKind::Confirm { .. })
                                     | Some(FlatQuestionKind::Select { .. })
+                                    | Some(FlatQuestionKind::MultiSelect { .. })
                             ) {
                                 if state.selected_option > 0 {
                                     state.selected_option -= 1;
@@ -898,8 +1012,31 @@ impl InterviewBackend for RatatuiBackend {
                                             state.selected_option += 1;
                                         }
                                     }
+                                    FlatQuestionKind::MultiSelect { options, .. } => {
+                                        if state.selected_option < options.len() - 1 {
+                                            state.selected_option += 1;
+                                        }
+                                    }
                                     _ => {}
                                 }
+                            }
+                        }
+                        KeyCode::Char(' ') => {
+                            // Space toggles selection in multi-select
+                            if let Some(FlatQuestionKind::MultiSelect { options, .. }) =
+                                state.current_question().map(|q| &q.kind)
+                            {
+                                // Ensure multi_selected is properly sized
+                                if state.multi_selected.len() != options.len() {
+                                    state.multi_selected = vec![false; options.len()];
+                                }
+                                if state.selected_option < state.multi_selected.len() {
+                                    state.multi_selected[state.selected_option] =
+                                        !state.multi_selected[state.selected_option];
+                                }
+                            } else {
+                                // For other question types, treat space as regular input
+                                state.handle_input(key.code);
                             }
                         }
                         KeyCode::Backspace if state.input.is_empty() && state.current_index > 0 => {
@@ -910,6 +1047,7 @@ impl InterviewBackend for RatatuiBackend {
                                 state.current_question().map(|q| &q.kind),
                                 Some(FlatQuestionKind::Confirm { .. })
                                     | Some(FlatQuestionKind::Select { .. })
+                                    | Some(FlatQuestionKind::MultiSelect { .. })
                             ) {
                                 state.handle_input(key.code);
                             }

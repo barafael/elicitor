@@ -595,6 +595,42 @@ impl EguiWizardApp {
                 ui.checkbox(&mut value, "Yes");
                 *self.state.get_or_init_buffer(id) = value.to_string();
             }
+            QuestionKind::MultiSelect(multi_q) => {
+                // Use a special encoding for multi-select: comma-separated indices
+                let buffer = self.state.get_or_init_buffer(id);
+                
+                // Parse current selections from buffer
+                let mut selected: Vec<bool> = if buffer.is_empty() {
+                    // Initialize with defaults
+                    multi_q.options.iter().enumerate()
+                        .map(|(idx, _)| multi_q.defaults.contains(&idx))
+                        .collect()
+                } else {
+                    // Parse from comma-separated indices
+                    let indices: std::collections::HashSet<usize> = buffer
+                        .split(',')
+                        .filter_map(|s| s.trim().parse().ok())
+                        .collect();
+                    (0..multi_q.options.len())
+                        .map(|idx| indices.contains(&idx))
+                        .collect()
+                };
+
+                ui.vertical(|ui| {
+                    for (idx, option) in multi_q.options.iter().enumerate() {
+                        if idx < selected.len() {
+                            ui.checkbox(&mut selected[idx], option);
+                        }
+                    }
+                });
+
+                // Update buffer with selected indices
+                let selected_indices: Vec<String> = selected.iter()
+                    .enumerate()
+                    .filter_map(|(idx, &sel)| if sel { Some(idx.to_string()) } else { None })
+                    .collect();
+                *self.state.get_or_init_buffer(id) = selected_indices.join(",");
+            }
             QuestionKind::Sequence(_) | QuestionKind::Alternative(_, _) => {
                 // These are handled in show_question_recursive
                 ui.colored_label(
@@ -951,6 +987,19 @@ impl EguiWizardApp {
             QuestionKind::Confirm(_) => {
                 let val = buffer == "true";
                 answers.insert(id.to_string(), AnswerValue::Bool(val));
+                Ok(())
+            }
+            QuestionKind::MultiSelect(_) => {
+                // Parse comma-separated indices from buffer
+                let indices: Vec<i64> = if buffer.is_empty() {
+                    vec![]
+                } else {
+                    buffer
+                        .split(',')
+                        .filter_map(|s| s.trim().parse().ok())
+                        .collect()
+                };
+                answers.insert(id.to_string(), AnswerValue::IntList(indices));
                 Ok(())
             }
             QuestionKind::Sequence(_) | QuestionKind::Alternative(_, _) => {

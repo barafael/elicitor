@@ -241,6 +241,21 @@ impl DialoguerBackend {
                     }
                 }
             }
+            QuestionKind::MultiSelect(multi_q) => {
+                let choice_refs: Vec<&str> = multi_q.options.iter().map(|s| s.as_str()).collect();
+                
+                let selections = dialoguer::MultiSelect::new()
+                    .with_prompt(Self::strip_prompt_colon(question.prompt()))
+                    .items(&choice_refs)
+                    .defaults(&multi_q.defaults.iter().map(|&i| i < multi_q.options.len()).collect::<Vec<_>>())
+                    .interact()
+                    .map_err(|e| {
+                        BackendError::ExecutionError(format!("Failed to prompt: {}", e))
+                    })?;
+                
+                let selected_indices: Vec<i64> = selections.into_iter().map(|i| i as i64).collect();
+                answers.insert(id.to_string(), AnswerValue::IntList(selected_indices));
+            }
         }
 
         Ok(())
