@@ -5,7 +5,7 @@
 use derive_wizard::Wizard;
 
 /// Programming languages the user is familiar with
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Wizard)]
 pub enum Language {
     Rust,
     Python,
@@ -33,7 +33,7 @@ impl std::fmt::Display for Language {
 }
 
 /// Interests for the survey
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Wizard)]
 pub enum Interest {
     WebDevelopment,
     MobileDevelopment,
@@ -62,33 +62,34 @@ impl std::fmt::Display for Interest {
 
 /// Developer survey with multi-select fields
 #[derive(Debug, Wizard)]
-#[wizard(title = "Developer Survey")]
 pub struct DeveloperSurvey {
     /// Your name
-    #[wizard(prompt = "What is your name?")]
+    #[prompt("What is your name?")]
     name: String,
 
     /// Years of experience
-    #[wizard(prompt = "How many years of programming experience do you have?")]
+    #[prompt("How many years of programming experience do you have?")]
     years_experience: u32,
 
     /// Programming languages (select multiple)
-    #[wizard(prompt = "Which programming languages are you proficient in?")]
+    #[prompt("Which programming languages are you proficient in?")]
     languages: Vec<Language>,
 
     /// Areas of interest (select multiple)
-    #[wizard(prompt = "Which areas of software development interest you?")]
+    #[prompt("Which areas of software development interest you?")]
     interests: Vec<Interest>,
 
     /// Preferred work style
-    #[wizard(prompt = "Do you prefer remote work?")]
+    #[prompt("Do you prefer remote work?")]
     remote_preference: bool,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== Developer Survey ===\n");
-
-    let survey = DeveloperSurvey::run_wizard()?;
+fn main() {
+    let backend = derive_wizard::DialoguerBackend::new();
+    let survey = DeveloperSurvey::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     println!("\n=== Survey Results ===\n");
     println!("Name: {}", survey.name);
@@ -112,6 +113,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "No"
         }
     );
-
-    Ok(())
 }

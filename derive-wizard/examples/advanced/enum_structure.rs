@@ -1,6 +1,7 @@
 use derive_wizard::Wizard;
 
 #[derive(Wizard, Debug)]
+#[allow(unused)]
 enum AccountType {
     Free,
     Premium {
@@ -10,6 +11,7 @@ enum AccountType {
 }
 
 #[derive(Wizard, Debug)]
+#[allow(unused)]
 enum PaymentMethod {
     CreditCard,
     PayPal,

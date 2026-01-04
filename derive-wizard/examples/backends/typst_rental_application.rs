@@ -44,11 +44,8 @@ enum EmploymentStatus {
 }
 
 fn main() {
-    #[cfg(feature = "typst-form")]
-    {
-        let typst_markup = RentalApplication::to_typst_form(Some("RENTAL APPLICATION"));
-        std::fs::write("rental_application.typ", &typst_markup)
-            .expect("Failed to write rental_application.typ");
-        println!("✓ Generated Typst form: rental_application.typ");
-    }
+    let typst_markup = RentalApplication::to_typst_form(Some("RENTAL APPLICATION"));
+    std::fs::write("rental_application.typ", &typst_markup)
+        .expect("Failed to write rental_application.typ");
+    println!("✓ Generated Typst form: rental_application.typ");
 }

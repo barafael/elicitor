@@ -166,6 +166,11 @@ path = "examples/backends/typst_multi_select.rs"
 required-features = ["typst-form"]
 
 [[example]]
+name = "typst_rental_application"
+path = "examples/backends/typst_rental_application.rs"
+required-features = ["typst-form"]
+
+[[example]]
 name = "nested_validation"
 path = "examples/features/nested_validation.rs"
 required-features = ["requestty-backend"]
@@ -174,6 +179,10 @@ required-features = ["requestty-backend"]
 name = "egui_nested_validation"
 path = "examples/features/egui_nested_validation.rs"
 required-features = ["egui-backend"]
+
+[[example]]
+name = "multi_select"
+path = "examples/features/multi_select.rs"
 
 # Builder examples
 [[example]]
@@ -190,5 +199,13 @@ name = "deeply_nested"
 path = "examples/advanced/deeply_nested.rs"
 
 [[example]]
+name = "enum_structure"
+path = "examples/advanced/enum_structure.rs"
+
+[[example]]
 name = "nested_enum_payment"
 path = "examples/advanced/nested_enum_payment.rs"
+
+[[example]]
+name = "print_interview"
+path = "examples/advanced/print_interview.rs"

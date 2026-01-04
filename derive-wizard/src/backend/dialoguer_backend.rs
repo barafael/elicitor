@@ -10,9 +10,20 @@ impl DialoguerBackend {
         Self
     }
 
-    /// Strip trailing colon from prompt since dialoguer adds one automatically
-    fn strip_prompt_colon(prompt: &str) -> &str {
-        prompt.strip_suffix(':').unwrap_or(prompt).trim_end()
+    /// Format prompt for dialoguer. If it ends with "?", print it separately
+    /// and return a simple prompt. Otherwise strip trailing colon since dialoguer adds one.
+    fn format_prompt(prompt: &str) -> String {
+        if prompt.ends_with('?') {
+            // Print the question on its own line, then use a simple prompt
+            println!("{}", prompt);
+            ">".to_string()
+        } else {
+            prompt
+                .strip_suffix(':')
+                .unwrap_or(prompt)
+                .trim_end()
+                .to_string()
+        }
     }
 
     fn execute_question(
@@ -25,7 +36,7 @@ impl DialoguerBackend {
         match question.kind() {
             QuestionKind::Input(input_q) => {
                 let mut input = dialoguer::Input::<String>::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
+                    .with_prompt(Self::format_prompt(question.prompt()));
 
                 if let Some(ref default) = input_q.default {
                     input = input.default(default.to_string());
@@ -51,7 +62,7 @@ impl DialoguerBackend {
             }
             QuestionKind::Masked(_masked_q) => {
                 let answer = dialoguer::Password::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()))
+                    .with_prompt(Self::format_prompt(question.prompt()))
                     .interact()
                     .map_err(|e| {
                         BackendError::ExecutionError(format!("Failed to prompt: {}", e))
@@ -61,7 +72,7 @@ impl DialoguerBackend {
             }
             QuestionKind::Int(int_q) => {
                 let mut input = dialoguer::Input::<i64>::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
+                    .with_prompt(Self::format_prompt(question.prompt()));
 
                 if let Some(default) = int_q.default {
                     input = input.default(default);
@@ -94,7 +105,7 @@ impl DialoguerBackend {
             }
             QuestionKind::Float(float_q) => {
                 let mut input = dialoguer::Input::<f64>::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()));
+                    .with_prompt(Self::format_prompt(question.prompt()));
 
                 if let Some(default) = float_q.default {
                     input = input.default(default);
@@ -144,7 +155,7 @@ impl DialoguerBackend {
                     let choice_refs: Vec<&str> = choices.iter().map(|s| s.as_str()).collect();
 
                     let selection = dialoguer::Select::new()
-                        .with_prompt(Self::strip_prompt_colon(question.prompt()))
+                        .with_prompt(Self::format_prompt(question.prompt()))
                         .items(&choice_refs)
                         .default(0)
                         .interact()
@@ -207,7 +218,7 @@ impl DialoguerBackend {
                 let choice_refs: Vec<&str> = choices.iter().map(|s| s.as_str()).collect();
 
                 let selection = dialoguer::Select::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()))
+                    .with_prompt(Self::format_prompt(question.prompt()))
                     .items(&choice_refs)
                     .default(*default_idx)
                     .interact()
@@ -238,7 +249,7 @@ impl DialoguerBackend {
                 let choice_refs: Vec<&str> = multi_q.options.iter().map(|s| s.as_str()).collect();
 
                 let selections = dialoguer::MultiSelect::new()
-                    .with_prompt(Self::strip_prompt_colon(question.prompt()))
+                    .with_prompt(Self::format_prompt(question.prompt()))
                     .items(&choice_refs)
                     .defaults(
                         &multi_q
@@ -323,7 +334,7 @@ impl InterviewBackend for DialoguerBackend {
                 QuestionKind::Input(input_q) if input_q.validate.is_some() => {
                     // Input with validation
                     let mut input = dialoguer::Input::<String>::new()
-                        .with_prompt(Self::strip_prompt_colon(question.prompt()));
+                        .with_prompt(Self::format_prompt(question.prompt()));
 
                     if let Some(ref default) = input_q.default {
                         input = input.default(default.to_string());
