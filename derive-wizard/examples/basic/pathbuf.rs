@@ -8,6 +8,6 @@ struct FileConfig {
 }
 
 fn main() {
-    let config = FileConfig::wizard_builder().build();
+    let config = FileConfig::wizard_builder().build().unwrap();
     println!("  Input:  {:?}", config.path);
 }

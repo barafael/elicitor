@@ -62,7 +62,7 @@ fn main() {
             .with_title("Derive Wizard Showcase")
             .with_window_size([600.0, 700.0]);
 
-        let magic = ShowCase::wizard_builder().with_backend(backend).build();
+        let magic = ShowCase::wizard_builder().with_backend(backend).build().unwrap();
         println!("=== Configuration Created ===");
         println!("{magic:#?}");
     }
@@ -73,7 +73,7 @@ fn main() {
         println!("Run with --features egui-backend to use the GUI version");
         println!();
 
-        let magic = ShowCase::wizard_builder().build();
+        let magic = ShowCase::wizard_builder().build().unwrap();
         println!("=== Configuration Created ===");
         println!("{magic:#?}");
     }

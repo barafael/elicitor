@@ -127,7 +127,7 @@ fn main() {
         .with_title("Server Configuration")
         .with_window_size([450.0, 350.0]);
 
-    let config = ServerConfig::wizard_builder().with_backend(backend).build();
+    let config = ServerConfig::wizard_builder().with_backend(backend).build().unwrap();
 
     println!();
     println!("=== Configuration Created ===");

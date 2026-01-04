@@ -19,7 +19,7 @@ fn main() {
 
     // Example 1: Simple builder with default backend
     println!("Example 1: Using default backend");
-    let config1 = ServerConfig::wizard_builder().build();
+    let config1 = ServerConfig::wizard_builder().build().unwrap();
     println!("Config: {:#?}", config1);
 
     // Example 2: Builder with custom backend (dialoguer)
@@ -27,7 +27,7 @@ fn main() {
     {
         println!("Example 2: Using dialoguer backend");
         let backend = derive_wizard::DialoguerBackend::new();
-        let config2 = ServerConfig::wizard_builder().with_backend(backend).build();
+        let config2 = ServerConfig::wizard_builder().with_backend(backend).build().unwrap();
         println!("Config: {:#?}", config2);
     }
 
@@ -40,6 +40,6 @@ fn main() {
     };
     let config3 = ServerConfig::wizard_builder()
         .with_suggestions(suggestions)
-        .build();
+        .build().unwrap();
     println!("Config: {:#?}", config3);
 }

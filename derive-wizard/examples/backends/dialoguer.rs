@@ -39,7 +39,7 @@ fn main() {
 
     // Use the dialoguer backend with builder API
     let backend = derive_wizard::DialoguerBackend::new();
-    let profile = UserProfile::wizard_builder().with_backend(backend).build();
+    let profile = UserProfile::wizard_builder().with_backend(backend).build().unwrap();
 
     println!("=== Profile Created ===");
     println!("{:#?}", profile);

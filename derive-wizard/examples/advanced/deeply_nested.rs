@@ -37,6 +37,6 @@ struct Event {
 }
 
 fn main() {
-    let event = Event::wizard_builder().build();
+    let event = Event::wizard_builder().build().unwrap();
     println!("{event:#?}");
 }

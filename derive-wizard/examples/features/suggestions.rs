@@ -15,13 +15,13 @@ struct UserProfile {
 
 fn main() {
     println!("=== Creating a new user profile ===");
-    let profile = UserProfile::wizard_builder().build();
+    let profile = UserProfile::wizard_builder().build().unwrap();
     println!("Created profile: {profile:#?}");
 
     println!("=== Editing the existing profile ===");
     println!("The current values will be pre-filled as suggestions.");
     let updated_profile = UserProfile::wizard_builder()
         .with_suggestions(profile)
-        .build();
+        .build().unwrap();
     println!("Updated profile: {updated_profile:#?}");
 }

@@ -19,7 +19,7 @@ struct ServerConfig {
 }
 
 fn main() {
-    let config = ServerConfig::wizard_builder().build();
+    let config = ServerConfig::wizard_builder().build().unwrap();
     println!("\n=== Server Configuration ===");
     println!("{:#?}", config);
 }

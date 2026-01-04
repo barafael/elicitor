@@ -63,6 +63,6 @@ pub fn validate_email(input: &str, _answers: &derive_wizard::Answers) -> Result<
 }
 
 fn main() {
-    let config = ServerConfig::wizard_builder().build();
+    let config = ServerConfig::wizard_builder().build().unwrap();
     println!("{config:#?}");
 }

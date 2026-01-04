@@ -19,6 +19,6 @@ fn main() {
     println!("This demonstrates the #[multiline] attribute");
     println!("which opens your preferred text editor for longer input.");
 
-    let article = Article::wizard_builder().build();
+    let article = Article::wizard_builder().build().unwrap();
     println!("{article:#?}");
 }

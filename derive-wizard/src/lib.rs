@@ -170,7 +170,7 @@ impl<T: Wizard> WizardBuilder<T> {
 
     /// Execute the wizard and return the result
     #[cfg(feature = "requestty-backend")]
-    pub fn build(self) -> T {
+    pub fn build(self) -> Result<T, BackendError> {
         use crate::backend::requestty_backend::RequesttyBackend;
 
         let backend = self.backend.unwrap_or_else(|| Box::new(RequesttyBackend));
@@ -194,18 +194,21 @@ impl<T: Wizard> WizardBuilder<T> {
             }
         }
 
-        let answers = backend
-            .execute_with_validator(&interview, &T::validate_field)
-            .expect("Failed to execute interview");
-        T::from_answers(&answers).expect("Failed to build from answers")
+        let answers = backend.execute_with_validator(&interview, &T::validate_field)?;
+        T::from_answers(&answers)
     }
 
     /// Execute the wizard and return the result (no default backend required)
     #[cfg(not(feature = "requestty-backend"))]
-    pub fn build(self) -> T {
-        let backend = self
-            .backend
-            .expect("No backend specified and requestty-backend feature is not enabled");
+    pub fn build(self) -> Result<T, BackendError> {
+        let backend = match self.backend {
+            Some(backend) => backend,
+            None => {
+                return Err(BackendError::Custom(
+                    "No backend specified and requestty-backend feature is not enabled".to_string(),
+                ));
+            }
+        };
 
         let mut interview = match &self.suggestions {
             Some(suggestions) => suggestions.interview_with_suggestions(),
@@ -226,9 +229,7 @@ impl<T: Wizard> WizardBuilder<T> {
             }
         }
 
-        let answers = backend
-            .execute_with_validator(&interview, &T::validate_field)
-            .expect("Failed to execute interview");
-        T::from_answers(&answers).expect("Failed to build from answers")
+        let answers = backend.execute_with_validator(&interview, &T::validate_field)?;
+        T::from_answers(&answers)
     }
 }

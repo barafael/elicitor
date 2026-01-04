@@ -119,13 +119,14 @@ struct Config {
 }
 
 // Simple usage with default backend (requestty)
-let config = Config::wizard_builder().build();
+let config = Config::wizard_builder().build().unwrap();
 println!("Config: {config:#?}");
 
 // Edit configuration with suggestions pre-filled
 let updated_config = Config::wizard_builder()
     .with_suggestions(config)
-    .build();
+    .build()
+    .unwrap();
 println!("Updated config: {updated_config:#?}");
 ```
 
@@ -147,7 +148,8 @@ use derive_wizard::Wizard;
 let backend = derive_wizard::RequesttyBackend::new();
 let config = Config::wizard_builder()
     .with_backend(backend)
-    .build();
+    .build()
+    .unwrap();
 println!("Config: {config:#?}");
 
 // Combine suggestions with custom backend
@@ -155,7 +157,8 @@ let backend = derive_wizard::RequesttyBackend::new();
 let updated_config = Config::wizard_builder()
     .with_suggestions(config)
     .with_backend(backend)
-    .build();
+    .build()
+    .unwrap();
 println!("Updated config: {updated_config:#?}");
 ```
 
@@ -242,6 +245,7 @@ let config = Config::wizard_builder()
 ```
 
 Assumptions are useful for:
+
 - Enforcing security policies (e.g., always enable SSL in production)
 - Providing sensible defaults that users shouldn't change
 - Batch processing with some fixed and some variable fields
@@ -277,6 +281,7 @@ struct UserProfile {
 ```
 
 **Namespace Prefixing**: Each nested field is prefixed with its parent field name and a dot. This allows you to:
+
 - Have duplicate field names in different nested structures
 - Target specific nested fields with suggestions and assumptions
 - Maintain a flat question list while preserving logical structure
@@ -316,6 +321,7 @@ let profile = UserProfile::wizard_builder()
 ```
 
 The `field!` macro supports:
+
 - Simple fields: `field!(name)` → `"name"`
 - One level nesting: `field!(Type::field)` → `"field"`
 - Two level nesting: `field!(Type::nested::field)` → `"nested.field"`
@@ -364,6 +370,7 @@ let org = Organization::wizard_builder()
 ```
 
 This namespace approach ensures that:
+
 - No field names collide, even with identical names in different nested structures
 - You can precisely target any field using the `field!` macro
 - The interview remains a flat list of questions (no complex nesting UI)

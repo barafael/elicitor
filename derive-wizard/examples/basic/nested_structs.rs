@@ -40,6 +40,6 @@ struct User {
 }
 
 fn main() {
-    let user = User::wizard_builder().build();
+    let user = User::wizard_builder().build().unwrap();
     println!("{user:#?}");
 }

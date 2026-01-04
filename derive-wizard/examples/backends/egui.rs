@@ -44,7 +44,7 @@ fn main() {
         .with_title("User Profile Wizard")
         .with_window_size([400.0, 300.0]);
 
-    let profile = UserProfile::wizard_builder().with_backend(backend).build();
+    let profile = UserProfile::wizard_builder().with_backend(backend).build().unwrap();
 
     println!("=== Profile Created ===");
     println!("{:#?}", profile);

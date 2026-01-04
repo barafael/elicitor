@@ -24,7 +24,7 @@ fn main() {
     #[cfg(feature = "requestty-backend")]
     {
         println!("--- Example 1: Default Builder (Requestty) ---");
-        let profile1 = UserProfile::wizard_builder().build();
+        let profile1 = UserProfile::wizard_builder().build().unwrap();
         println!("Profile: {:#?}", profile1);
     }
 
@@ -33,7 +33,7 @@ fn main() {
     {
         println!("--- Example 2: Builder with Dialoguer Backend ---");
         let backend = derive_wizard::DialoguerBackend::new();
-        let profile2 = UserProfile::wizard_builder().with_backend(backend).build();
+        let profile2 = UserProfile::wizard_builder().with_backend(backend).build().unwrap();
         println!("Profile: {:#?}", profile2);
     }
 
@@ -45,7 +45,7 @@ fn main() {
             .with_title("User Profile")
             .with_window_size([450.0, 350.0]);
 
-        let profile3 = UserProfile::wizard_builder().with_backend(backend).build();
+        let profile3 = UserProfile::wizard_builder().with_backend(backend).build().unwrap();
         println!("Profile: {:#?}", profile3);
     }
 
@@ -62,7 +62,7 @@ fn main() {
 
         let profile4 = UserProfile::wizard_builder()
             .with_suggestions(suggestions)
-            .build();
+            .build().unwrap();
         println!("Profile: {:#?}", profile4);
     }
 
@@ -82,7 +82,7 @@ fn main() {
         let profile5 = UserProfile::wizard_builder()
             .with_suggestions(suggestions)
             .with_backend(backend)
-            .build();
+            .build().unwrap();
         println!("Profile: {:#?}", profile5);
     }
 

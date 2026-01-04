@@ -23,6 +23,6 @@ enum Transport {
 }
 
 fn main() {
-    let transport = Transport::wizard_builder().build();
+    let transport = Transport::wizard_builder().build().unwrap();
     println!("{:#?}", transport);
 }

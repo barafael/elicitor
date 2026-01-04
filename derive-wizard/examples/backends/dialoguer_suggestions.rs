@@ -39,7 +39,7 @@ fn main() {
     // Create initial settings with builder API
     let backend = derive_wizard::DialoguerBackend::new();
     println!("--- First Run: Create New Settings ---");
-    let settings = AppSettings::wizard_builder().with_backend(backend).build();
+    let settings = AppSettings::wizard_builder().with_backend(backend).build().unwrap();
 
     println!("=== Settings Created ===");
     println!("{:#?}", settings);
@@ -51,7 +51,7 @@ fn main() {
     let updated_settings = AppSettings::wizard_builder()
         .with_suggestions(settings)
         .with_backend(backend)
-        .build();
+        .build().unwrap();
 
     println!("=== Updated Settings ===");
     println!("{:#?}", updated_settings);

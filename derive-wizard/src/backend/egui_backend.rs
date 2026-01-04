@@ -117,8 +117,12 @@ impl InterviewBackend for EguiBackend {
                 {
                     return Ok(()); // Channel closed, assume valid
                 }
-                // Wait for response
-                validate_result_rx.lock().unwrap().recv().unwrap_or(Ok(()))
+
+                // Wait for response without panicking on lock/channel errors
+                match validate_result_rx.lock() {
+                    Ok(rx) => rx.recv().unwrap_or(Ok(())),
+                    Err(_) => Ok(()), // Poisoned lock: assume valid instead of panic
+                }
             });
 
         // Use thread::scope to allow borrowing the validator reference
@@ -734,7 +738,11 @@ impl EguiWizardApp {
                                 for (id, err) in &errs {
                                     self.state.validation_errors.insert(id.clone(), err.clone());
                                 }
-                                Err(errs.into_iter().next().unwrap())
+
+                                match errs.into_iter().next() {
+                                    Some(first) => Err(first),
+                                    None => Ok(()),
+                                }
                             }
                         } else {
                             Ok(())
@@ -761,7 +769,11 @@ impl EguiWizardApp {
                         for (id, err) in &errs {
                             self.state.validation_errors.insert(id.clone(), err.clone());
                         }
-                        Err(errs.into_iter().next().unwrap())
+
+                        match errs.into_iter().next() {
+                            Some(first) => Err(first),
+                            None => Ok(()),
+                        }
                     }
                 }
             }
@@ -802,7 +814,11 @@ impl EguiWizardApp {
                             for (id, err) in &errs {
                                 self.state.validation_errors.insert(id.clone(), err.clone());
                             }
-                            Err(errs.into_iter().next().unwrap())
+
+                            match errs.into_iter().next() {
+                                Some(first) => Err(first),
+                                None => Ok(()),
+                            }
                         }
                     } else {
                         Ok(())

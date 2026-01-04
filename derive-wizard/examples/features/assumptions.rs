@@ -34,7 +34,7 @@ fn main() {
         .assume_field("environment", "production".to_string()) // Fixed: production
         .assume_field("debug", false) // Fixed: no debug in prod
         .assume_field("port", 443) // Fixed: HTTPS port
-        .build(); // Will only ask about 'app_name' and 'database_url'
+        .build().unwrap(); // Will only ask about 'app_name' and 'database_url'
 
     println!("=== Configuration (with partial assumptions) ===");
     println!("{:#?}", config);
@@ -54,7 +54,7 @@ fn main() {
             "database_url",
             "postgresql://prod-db:5432/batch".to_string(),
         )
-        .build();
+        .build().unwrap();
 
     println!("=== Batch Configuration (all assumed, no questions) ===");
     println!("{:#?}", batch_config);

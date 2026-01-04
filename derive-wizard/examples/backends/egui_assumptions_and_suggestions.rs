@@ -44,7 +44,7 @@ fn main() {
 
     let fresh_config = ServerConfig::wizard_builder()
         .with_backend(backend1)
-        .build();
+        .build().unwrap();
 
     println!("Fresh config created:");
     println!("{:#?}", fresh_config);
@@ -61,7 +61,7 @@ fn main() {
     let config_with_suggestions = ServerConfig::wizard_builder()
         .with_suggestions(fresh_config.clone())
         .with_backend(backend2)
-        .build();
+        .build().unwrap();
 
     println!("Config with suggestions:");
     println!("{:#?}", config_with_suggestions);
@@ -92,7 +92,7 @@ fn main() {
         .assume_field("debug_logging", false)
         // .assume_field("server_name", "sv14")
         .with_backend(backend3)
-        .build();
+        .build().unwrap();
 
     println!("=== Final Production Config (from assumptions) ===");
     println!("{:#?}", config_with_assumptions);
