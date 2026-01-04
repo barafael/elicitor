@@ -16,12 +16,15 @@ eframe = { version = "0.29", optional = true }
 dialoguer = { version = "0.11", optional = true }
 typst = { version = "0.12", optional = true }
 itertools = { version = "0.14", optional = true }
+ratatui = { version = "0.29", optional = true }
+crossterm = { version = "0.28", optional = true }
 
 [features]
 default = ["requestty-backend"]
 requestty-backend = ["requestty"]
 egui-backend = ["egui", "eframe", "itertools"]
 dialoguer-backend = ["dialoguer"]
+ratatui-backend = ["ratatui", "crossterm"]
 typst-backend = ["typst"]
 typst-form = []
 
@@ -49,6 +52,26 @@ required-features = ["egui-backend"]
 name = "dialoguer"
 path = "examples/backends/dialoguer.rs"
 required-features = ["dialoguer-backend"]
+
+[[example]]
+name = "ratatui"
+path = "examples/backends/ratatui.rs"
+required-features = ["ratatui-backend"]
+
+[[example]]
+name = "ratatui_pizza"
+path = "examples/backends/ratatui_pizza.rs"
+required-features = ["ratatui-backend"]
+
+[[example]]
+name = "ratatui_job_application"
+path = "examples/backends/ratatui_job_application.rs"
+required-features = ["ratatui-backend"]
+
+[[example]]
+name = "ratatui_server_config"
+path = "examples/backends/ratatui_server_config.rs"
+required-features = ["ratatui-backend"]
 
 [[example]]
 name = "dialoguer_suggestions"

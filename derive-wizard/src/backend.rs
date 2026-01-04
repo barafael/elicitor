@@ -11,6 +11,9 @@ pub mod dialoguer_backend;
 #[cfg(feature = "egui-backend")]
 pub mod egui_backend;
 
+#[cfg(feature = "ratatui-backend")]
+pub mod ratatui_backend;
+
 #[derive(Debug, thiserror::Error)]
 pub enum BackendError {
     #[error("Answer error: {0}")]

@@ -7,6 +7,7 @@
     not(feature = "requestty-backend"),
     not(feature = "egui-backend"),
     not(feature = "dialoguer-backend"),
+    not(feature = "ratatui-backend"),
 ))]
 compile_error!("derive-wizard requires a backend feature. Enable one backend feature.");
 
@@ -32,6 +33,12 @@ pub use backend::dialoguer_backend::DialoguerBackend;
 
 #[cfg(feature = "egui-backend")]
 pub use backend::egui_backend::EguiBackend;
+
+#[cfg(feature = "ratatui-backend")]
+pub use backend::ratatui_backend::{RatatuiBackend, Theme as RatatuiTheme};
+
+#[cfg(feature = "ratatui-backend")]
+pub use ratatui::style::Color as RatatuiColor;
 
 pub trait Wizard: Sized {
     /// Get the interview structure for this type
