@@ -22,6 +22,7 @@ struct Address {
 #[derive(Debug, PartialEq, Wizard)]
 struct UserWithAddress {
     name: String,
+    #[prompt("Address:")]
     address: Address,
 }
 
@@ -36,6 +37,7 @@ enum PaymentMethod {
 struct Order {
     item: String,
     quantity: i64,
+    #[prompt("Payment method:")]
     payment: PaymentMethod,
 }
 
@@ -46,7 +48,10 @@ fn test_basic_struct_with_string_int_bool() {
         .with_int("age", 30)
         .with_bool("active", true);
 
-    let result = BasicUser::wizard_builder().with_backend(backend).build().unwrap();
+    let result = BasicUser::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -66,7 +71,8 @@ fn test_struct_with_float() {
 
     let result = UserWithFloat::wizard_builder()
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -86,7 +92,8 @@ fn test_nested_struct() {
 
     let result = UserWithAddress::wizard_builder()
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -107,7 +114,10 @@ fn test_enum_simple_variant() {
         .with_int("quantity", 2)
         .with_int("payment.selected_alternative", 0); // Cash
 
-    let result = Order::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Order::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -128,7 +138,10 @@ fn test_enum_variant_with_fields() {
         .with_string("payment.number", "1234-5678-9012-3456")
         .with_string("payment.cvv", "123");
 
-    let result = Order::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Order::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -151,7 +164,10 @@ fn test_different_enum_variant() {
         .with_int("payment.selected_alternative", 2) // BankTransfer
         .with_string("payment.account", "DE89370400440532013000");
 
-    let result = Order::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Order::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(
         result,
@@ -172,7 +188,10 @@ fn test_builder_pattern_chaining() {
         .with_int("age", 25)
         .with_bool("active", false);
 
-    let result = BasicUser::wizard_builder().with_backend(backend).build().unwrap();
+    let result = BasicUser::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Dave");
     assert_eq!(result.age, 25);
@@ -186,14 +205,20 @@ fn test_multiple_test_backends() {
         .with_int("age", 20)
         .with_bool("active", true);
 
-    let result1 = BasicUser::wizard_builder().with_backend(backend1).build().unwrap();
+    let result1 = BasicUser::wizard_builder()
+        .with_backend(backend1)
+        .build()
+        .unwrap();
 
     let backend2 = TestBackend::new()
         .with_string("name", "User2")
         .with_int("age", 40)
         .with_bool("active", false);
 
-    let result2 = BasicUser::wizard_builder().with_backend(backend2).build().unwrap();
+    let result2 = BasicUser::wizard_builder()
+        .with_backend(backend2)
+        .build()
+        .unwrap();
 
     assert_eq!(result1.name, "User1");
     assert_eq!(result2.name, "User2");
@@ -216,7 +241,10 @@ fn test_multiple_numeric_types() {
         .with_int("small_int", 42)
         .with_float("small_float", 2.72);
 
-    let result = NumericTypes::wizard_builder().with_backend(backend).build().unwrap();
+    let result = NumericTypes::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.int_val, 100);
     assert_eq!(result.float_val, 3.15);
@@ -238,7 +266,10 @@ fn test_boolean_fields() {
         .with_int("port", 3000)
         .with_string("host", "0.0.0.0");
 
-    let result = Config::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Config::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert!(result.debug_mode);
     assert_eq!(result.port, 3000);
@@ -248,6 +279,7 @@ fn test_boolean_fields() {
 #[derive(Debug, PartialEq, Wizard)]
 struct Person {
     name: String,
+    #[prompt("Contact info:")]
     contact: ContactInfo,
 }
 
@@ -264,7 +296,10 @@ fn test_deeply_nested_structs() {
         .with_string("contact.email", "john@example.com")
         .with_string("contact.phone", "+1-555-0100");
 
-    let result = Person::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Person::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "John Doe");
     assert_eq!(result.contact.email, "john@example.com");
@@ -281,6 +316,7 @@ enum Status {
 #[derive(Debug, PartialEq, Wizard)]
 struct Account {
     username: String,
+    #[prompt("Account status:")]
     status: Status,
 }
 
@@ -291,7 +327,10 @@ fn test_struct_with_enum_field() {
         .with_int("status.selected_alternative", 2) // Pending
         .with_string("status.reason", "Awaiting verification");
 
-    let result = Account::wizard_builder().with_backend(backend).build().unwrap();
+    let result = Account::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.username, "alice");
     assert_eq!(
@@ -309,7 +348,10 @@ fn test_edge_case_empty_strings() {
         .with_int("age", 0)
         .with_bool("active", false);
 
-    let result = BasicUser::wizard_builder().with_backend(backend).build().unwrap();
+    let result = BasicUser::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "");
     assert_eq!(result.age, 0);
@@ -323,7 +365,10 @@ fn test_negative_numbers() {
         .with_int("age", -5)
         .with_bool("active", true);
 
-    let result = BasicUser::wizard_builder().with_backend(backend).build().unwrap();
+    let result = BasicUser::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.age, -5);
 }
@@ -336,7 +381,10 @@ fn test_large_numbers() {
         .with_int("small_int", i32::MAX as i64)
         .with_float("small_float", f32::MAX as f64);
 
-    let result = NumericTypes::wizard_builder().with_backend(backend).build().unwrap();
+    let result = NumericTypes::wizard_builder()
+        .with_backend(backend)
+        .build()
+        .unwrap();
 
     assert_eq!(result.int_val, i64::MAX);
     assert_eq!(result.float_val, f64::MAX);
@@ -362,7 +410,8 @@ fn test_assumptions_skip_questions() {
         .assume_field("port", 8080)
         .assume_field("host", "localhost".to_string())
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // Verify the result matches the assumptions
     assert!(result.debug_mode);
@@ -382,7 +431,8 @@ fn test_suggest_field() {
         .suggest_field("name", "Alice".to_string()) // Suggest but don't assume
         .suggest_field("age", 25)
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // The backend's answers should win over suggestions
     assert_eq!(result.name, "Bob");
@@ -403,7 +453,8 @@ fn test_multiple_suggest_fields() {
         .suggest_field("port", 8080)
         .suggest_field("debug_mode", true)
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // Backend answers should override suggestions
     assert_eq!(result.host, "production.example.com");
@@ -424,7 +475,8 @@ fn test_suggest_field_vs_assume_field() {
         .suggest_field("age", 99) // Suggestion - will ask
         .assume_field("active", true) // Assumption - will skip
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Charlie"); // User input overrides suggestion
     assert_eq!(result.age, 35); // User input overrides suggestion
@@ -452,7 +504,8 @@ fn test_nested_suggest_field() {
             "Springfield".to_string(),
         )
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // User input should override suggestions
     assert_eq!(result.name, "John");
@@ -477,7 +530,8 @@ fn test_nested_assume_field() {
             "Portland".to_string(),
         )
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Jane");
     assert_eq!(result.address.street, "789 Elm St"); // Assumed, not asked
@@ -503,7 +557,8 @@ fn test_nested_mixed_suggest_and_assume() {
             "Seattle".to_string(),
         )
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Bob");
     assert_eq!(result.address.street, "999 Pine Rd"); // Suggested, user overrode
@@ -524,7 +579,8 @@ fn test_deeply_nested_assume_field() {
         )
         .assume_field(field!(Person::contact::phone), "+1-555-9999".to_string())
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Alice");
     assert_eq!(result.contact.email, "alice@example.com");
@@ -540,7 +596,9 @@ fn test_duplicate_field_names_different_paths() {
     struct Organization {
         #[prompt("Organization name:")]
         name: String,
+        #[prompt("Primary department:")]
         primary: Department,
+        #[prompt("Secondary department:")]
         secondary: Department,
     }
 
@@ -569,7 +627,8 @@ fn test_duplicate_field_names_different_paths() {
             "Marketing".to_string(),
         )
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Acme Corp");
     assert_eq!(result.primary.name, "Engineering"); // Assumed
@@ -600,7 +659,8 @@ fn test_assumptions_vs_suggestions() {
         .assume_field("age", 100)
         .assume_field("active", true)
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // Assumptions should take precedence
     assert_eq!(result.name, "Assumed Name");
@@ -625,7 +685,8 @@ fn test_partial_assumptions() {
         .assume_field("age", 30)
         .assume_field("active", true)
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // The assumption should win
     assert_eq!(result.name, "Fixed Name");
@@ -644,7 +705,8 @@ fn test_assume_field() {
     let result = BasicUser::wizard_builder()
         .assume_field("active", true) // Only assume this field
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert_eq!(result.name, "Alice");
     assert_eq!(result.age, 25);
@@ -660,7 +722,8 @@ fn test_multiple_assume_fields() {
         .assume_field("debug_mode", true)
         .assume_field("port", 8080)
         .with_backend(backend)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     assert!(result.debug_mode);
     assert_eq!(result.port, 8080);

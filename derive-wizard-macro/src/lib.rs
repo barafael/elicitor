@@ -19,6 +19,13 @@ pub fn wizard_derive(input: TokenStream) -> TokenStream {
 
 fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
     let name = &input.ident;
+
+    // Check for non-builtin fields without #[prompt] and emit compile errors
+    let errors = collect_missing_prompt_errors(&input.data);
+    if !errors.is_empty() {
+        return TokenStream::from(errors);
+    }
+
     let interview = build_interview(input);
     let interview_code = generate_interview_code(&interview, &input.data);
 
@@ -43,11 +50,16 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!(),
     };
 
+    // Generate compile-time checks for validator functions
+    let validator_checks = generate_validator_checks(&input.data);
+
     TokenStream::from(quote! {
         #[allow(dead_code)]
         const _: fn(&derive_wizard::Answers) = |answers: &derive_wizard::Answers| {
             let _ = answers.iter();
         };
+
+        #validator_checks
 
         impl Wizard for #name {
             fn interview() -> derive_wizard::interview::Interview {
@@ -65,6 +77,129 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
             #validate_field_code
         }
     })
+}
+
+/// Check for non-builtin type fields that are missing the #[prompt] attribute.
+/// These fields would silently fail at runtime, so we catch them at compile time.
+fn collect_missing_prompt_errors(data: &Data) -> proc_macro2::TokenStream {
+    let mut errors = proc_macro2::TokenStream::new();
+
+    let check_field = |field: &syn::Field, errors: &mut proc_macro2::TokenStream| {
+        let field_name = field
+            .ident
+            .as_ref()
+            .map(|i| i.to_string())
+            .unwrap_or_else(|| "unnamed".to_string());
+        let attrs = FieldAttrs::extract(&field.attrs, &field_name);
+        let field_ty = &field.ty;
+
+        // If it's a non-builtin type without #[prompt], it's likely a mistake
+        if !is_builtin_type(field_ty)
+            && !attrs.has_explicit_prompt
+            && !attrs.mask
+            && !attrs.multiline
+        {
+            let type_name = type_ident_name(field_ty).unwrap_or_else(|| "unknown".to_string());
+            let msg = format!(
+                "field `{}` has non-builtin type `{}` but is missing #[prompt]. \
+                Add #[prompt(\"...\")] to treat it as a nested Wizard, \
+                or use #[mask] / #[multiline] if it should be a string input.",
+                field_name, type_name
+            );
+            let span = field
+                .ident
+                .as_ref()
+                .map(|i| i.span())
+                .unwrap_or_else(proc_macro2::Span::call_site);
+            errors.extend(quote::quote_spanned! { span =>
+                compile_error!(#msg);
+            });
+        }
+    };
+
+    match data {
+        Data::Struct(data) => {
+            if let Fields::Named(fields) = &data.fields {
+                for field in &fields.named {
+                    check_field(field, &mut errors);
+                }
+            }
+        }
+        Data::Enum(data) => {
+            for variant in &data.variants {
+                match &variant.fields {
+                    Fields::Named(fields) => {
+                        for field in &fields.named {
+                            check_field(field, &mut errors);
+                        }
+                    }
+                    Fields::Unnamed(fields) => {
+                        for field in &fields.unnamed {
+                            check_field(field, &mut errors);
+                        }
+                    }
+                    Fields::Unit => {}
+                }
+            }
+        }
+        Data::Union(_) => {}
+    }
+
+    errors
+}
+
+/// Generate compile-time checks that verify validator functions exist and have the correct signature.
+/// This catches typos in #[validate("func_name")] at compile time rather than runtime.
+fn generate_validator_checks(data: &Data) -> proc_macro2::TokenStream {
+    let mut checks = Vec::new();
+
+    let collect_from_field = |field: &syn::Field, checks: &mut Vec<proc_macro2::TokenStream>| {
+        let field_name = field
+            .ident
+            .as_ref()
+            .map(|i| i.to_string())
+            .unwrap_or_else(|| "unnamed".to_string());
+        let attrs = FieldAttrs::extract(&field.attrs, &field_name);
+
+        if let Some(validator_ident) = attrs.validate_ident {
+            // Generate a const assertion that the validator function has the correct signature
+            checks.push(quote! {
+                const _: fn(&str, &derive_wizard::Answers) -> Result<(), String> = #validator_ident;
+            });
+        }
+    };
+
+    match data {
+        Data::Struct(data) => {
+            if let Fields::Named(fields) = &data.fields {
+                for field in &fields.named {
+                    collect_from_field(field, &mut checks);
+                }
+            }
+        }
+        Data::Enum(data) => {
+            for variant in &data.variants {
+                match &variant.fields {
+                    Fields::Named(fields) => {
+                        for field in &fields.named {
+                            collect_from_field(field, &mut checks);
+                        }
+                    }
+                    Fields::Unnamed(fields) => {
+                        for field in &fields.unnamed {
+                            collect_from_field(field, &mut checks);
+                        }
+                    }
+                    Fields::Unit => {}
+                }
+            }
+        }
+        Data::Union(_) => {}
+    }
+
+    quote! {
+        #(#checks)*
+    }
 }
 
 fn build_interview(input: &syn::DeriveInput) -> Interview {
@@ -147,14 +282,13 @@ fn build_question(
         field_name.clone()
     };
 
-    // Check if this is a custom type (potential nested Wizard)
+    // Detect nested Wizard types: non-builtin type with explicit #[prompt] attribute
     let field_ty = &field.ty;
-    let is_builtin = is_builtin_type(field_ty);
-    let is_custom_type = !is_builtin && !attrs.mask && !attrs.multiline;
+    let is_nested =
+        attrs.has_explicit_prompt && !is_builtin_type(field_ty) && !attrs.mask && !attrs.multiline;
 
-    if is_custom_type {
-        // For custom types, we assume they might be Wizards and need to expand their fields
-        // We'll generate a marker question that will be expanded at runtime
+    if is_nested {
+        // Nested Wizard type - will be expanded at runtime
         vec![Question::new(
             Some(prefixed_name.clone()),
             prefixed_name,
@@ -232,6 +366,7 @@ fn is_builtin_type(ty: &Type) -> bool {
 
 struct FieldAttrs {
     prompt: String,
+    has_explicit_prompt: bool,
     mask: bool,
     multiline: bool,
     validate: Option<String>,
@@ -246,9 +381,10 @@ impl FieldAttrs {
     fn extract(attrs: &[syn::Attribute], field_name: &str) -> Self {
         let validate_str = extract_string_attr(attrs, "validate");
         let validate_ident = extract_validator_ident(attrs, "validate");
+        let explicit_prompt = extract_string_attr(attrs, "prompt");
         Self {
-            prompt: extract_string_attr(attrs, "prompt")
-                .unwrap_or_else(|| format!("Enter {field_name}:")),
+            has_explicit_prompt: explicit_prompt.is_some(),
+            prompt: explicit_prompt.unwrap_or_else(|| format!("Enter {field_name}:")),
             mask: has_attr(attrs, "mask"),
             multiline: has_attr(attrs, "multiline"),
             validate: validate_str,
@@ -785,9 +921,12 @@ fn generate_validate_field_method_struct(data: &syn::DataStruct) -> proc_macro2:
             });
         }
 
-        // Check if this is a nested wizard type (non-builtin, non-mask, non-multiline)
-        let is_builtin = is_builtin_type(field_ty);
-        if !is_builtin && !attrs.mask && !attrs.multiline {
+        // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+        let is_nested = attrs.has_explicit_prompt
+            && !is_builtin_type(field_ty)
+            && !attrs.mask
+            && !attrs.multiline;
+        if is_nested {
             let prefix = format!("{}.", field_name);
             nested_arms.push(quote! {
                 if field.starts_with(#prefix) {
@@ -845,9 +984,12 @@ fn generate_validate_field_method_enum(data: &syn::DataEnum) -> proc_macro2::Tok
                         });
                     }
 
-                    // Check if this is a nested wizard type
-                    let is_builtin = is_builtin_type(field_ty);
-                    if !is_builtin && !attrs.mask && !attrs.multiline {
+                    // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+                    let is_nested = attrs.has_explicit_prompt
+                        && !is_builtin_type(field_ty)
+                        && !attrs.mask
+                        && !attrs.multiline;
+                    if is_nested {
                         let prefix = format!("{}.", field_name);
                         nested_arms.push(quote! {
                             if field.starts_with(#prefix) {
@@ -871,9 +1013,12 @@ fn generate_validate_field_method_enum(data: &syn::DataEnum) -> proc_macro2::Tok
                         });
                     }
 
-                    // Check if this is a nested wizard type
-                    let is_builtin = is_builtin_type(field_ty);
-                    if !is_builtin && !attrs.mask && !attrs.multiline {
+                    // Check if this is a nested wizard type (non-builtin with explicit #[prompt])
+                    let is_nested = attrs.has_explicit_prompt
+                        && !is_builtin_type(field_ty)
+                        && !attrs.mask
+                        && !attrs.multiline;
+                    if is_nested {
                         let prefix = format!("{}.", field_name);
                         nested_arms.push(quote! {
                             if field.starts_with(#prefix) {

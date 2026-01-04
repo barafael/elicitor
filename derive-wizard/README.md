@@ -305,6 +305,7 @@ use derive_wizard::{Wizard, field};
 # struct UserProfile {
 #     #[prompt("Name:")]
 #     name: String,
+#     #[prompt("Address:")]
 #     address: Address,
 # }
 let profile = UserProfile::wizard_builder()
@@ -347,7 +348,9 @@ struct Organization {
     #[prompt("Organization name:")]
     name: String,  // Same field name as Department
     
+    #[prompt("Primary department:")]
     primary: Department,
+    #[prompt("Secondary department:")]
     secondary: Department,
 }
 

@@ -19,6 +19,7 @@ struct Address {
 #[allow(dead_code)]
 struct Person {
     name: String,
+    #[prompt("Address:")]
     address: Address,
 }
 
