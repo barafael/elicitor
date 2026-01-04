@@ -95,8 +95,7 @@ struct Article {
 - `#[prompt("message")]` - **Required**. The message to display to the user
 - `#[mask]` - **Optional**. For String fields: enables password input (hidden text)
 - `#[multiline]` - **Optional**. For String fields: opens text editor for longer input
-- `#[validate_on_submit("function_name")]` - **Optional**. Validates input when user submits
-- `#[validate_on_key("function_name")]` - **Optional**. Validates input on every keystroke
+- `#[validate("function_name")]` - **Optional**. Validates input with a custom function
 
 **Note**: `#[mask]` and `#[multiline]` are mutually exclusive and cannot be used on the same field.
 

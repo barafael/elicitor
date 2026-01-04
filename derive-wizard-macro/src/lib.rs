@@ -10,18 +10,7 @@ use derive_wizard_types::interview::{
 
 #[proc_macro_derive(
     Wizard,
-    attributes(
-        prompt,
-        mask,
-        multiline,
-        validate_on_submit,
-        validate_on_key,
-        validate,
-        min,
-        max,
-        prelude,
-        epilogue
-    )
+    attributes(prompt, mask, multiline, validate, min, max, prelude, epilogue)
 )]
 pub fn wizard_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input);
@@ -48,6 +37,19 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
         Data::Union(_) => unimplemented!(),
     };
 
+    let validate_field_code = match &input.data {
+        Data::Struct(data) => generate_validate_field_method(data),
+        Data::Enum(_data) => {
+            // For enums, return a stub
+            quote! {
+                fn validate_field(_field: &str, _value: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+                    Ok(())
+                }
+            }
+        }
+        Data::Union(_) => unimplemented!(),
+    };
+
     TokenStream::from(quote! {
         impl Wizard for #name {
             fn interview() -> derive_wizard::interview::Interview {
@@ -61,6 +63,8 @@ fn implement_wizard(input: &syn::DeriveInput) -> TokenStream {
             fn from_answers(answers: &derive_wizard::Answers) -> Result<Self, derive_wizard::backend::BackendError> {
                 #from_answers_code
             }
+
+            #validate_field_code
         }
     })
 }
@@ -193,8 +197,8 @@ struct FieldAttrs {
     prompt: String,
     mask: bool,
     multiline: bool,
-    validate_on_key: Option<String>,
-    validate_on_submit: Option<String>,
+    validate: Option<String>,
+    validate_ident: Option<proc_macro2::Ident>,
     min_int: Option<i64>,
     max_int: Option<i64>,
     min_float: Option<f64>,
@@ -203,14 +207,15 @@ struct FieldAttrs {
 
 impl FieldAttrs {
     fn extract(attrs: &[syn::Attribute], field_name: &str) -> Self {
-        let validate = extract_string_attr(attrs, "validate");
+        let validate_str = extract_string_attr(attrs, "validate");
+        let validate_ident = extract_validator_ident(attrs, "validate");
         Self {
             prompt: extract_string_attr(attrs, "prompt")
                 .unwrap_or_else(|| format!("Enter {field_name}:")),
             mask: has_attr(attrs, "mask"),
             multiline: has_attr(attrs, "multiline"),
-            validate_on_key: extract_string_attr(attrs, "validate_on_key").or(validate.clone()),
-            validate_on_submit: extract_string_attr(attrs, "validate_on_submit").or(validate),
+            validate: validate_str,
+            validate_ident,
             min_int: extract_int_attr(attrs, "min"),
             max_int: extract_int_attr(attrs, "max"),
             min_float: extract_float_attr(attrs, "min"),
@@ -223,24 +228,21 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
     if attrs.mask {
         return QuestionKind::Masked(MaskedQuestion {
             mask: Some('*'),
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         });
     }
 
     if attrs.multiline {
         return QuestionKind::Multiline(MultilineQuestion {
             default: None,
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         });
     }
 
     match quote!(#ty).to_string().as_str() {
         "String" => QuestionKind::Input(InputQuestion {
             default: None,
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         }),
         "bool" => QuestionKind::Confirm(ConfirmQuestion { default: false }),
         "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128"
@@ -248,28 +250,24 @@ fn determine_question_kind(ty: &Type, attrs: &FieldAttrs) -> QuestionKind {
             default: None,
             min: attrs.min_int,
             max: attrs.max_int,
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         }),
         "f32" | "f64" => QuestionKind::Float(FloatQuestion {
             default: None,
             min: attrs.min_float,
             max: attrs.max_float,
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         }),
         "PathBuf" => QuestionKind::Input(InputQuestion {
             default: None,
-            validate_on_key: attrs.validate_on_key.clone(),
-            validate_on_submit: attrs.validate_on_submit.clone(),
+            validate: attrs.validate.clone(),
         }),
         _type_path => {
             // For nested types, we'll need to handle them at the interview generation level
             // For now, default to Input for unknown types
             QuestionKind::Input(InputQuestion {
                 default: None,
-                validate_on_key: attrs.validate_on_key.clone(),
-                validate_on_submit: attrs.validate_on_submit.clone(),
+                validate: attrs.validate.clone(),
             })
         }
     }
@@ -295,6 +293,43 @@ fn extract_string_attr(attrs: &[syn::Attribute], name: &str) -> Option<String> {
                 if let syn::Expr::Lit(expr) = &nv.value {
                     if let Lit::Str(s) = &expr.lit {
                         Some(s.value())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            Meta::Path(_) => None,
+        }
+    })
+}
+
+fn extract_validator_ident(attrs: &[syn::Attribute], name: &str) -> Option<proc_macro2::Ident> {
+    attrs.iter().find_map(|attr| {
+        if !attr.path().is_ident(name) {
+            return None;
+        }
+
+        match &attr.meta {
+            Meta::List(list) => {
+                // Parse the string literal and extract the function name
+                syn::parse2::<Lit>(list.tokens.clone())
+                    .ok()
+                    .and_then(|lit| {
+                        if let Lit::Str(s) = lit {
+                            let func_name = s.value();
+                            Some(syn::Ident::new(&func_name, s.span()))
+                        } else {
+                            None
+                        }
+                    })
+            }
+            Meta::NameValue(nv) => {
+                if let syn::Expr::Lit(expr) = &nv.value {
+                    if let Lit::Str(s) = &expr.lit {
+                        let func_name = s.value();
+                        Some(syn::Ident::new(&func_name, s.span()))
                     } else {
                         None
                     }
@@ -482,38 +517,32 @@ fn generate_question_kind_code_impl(
         QuestionKind::Input(q) => {
             let default =
                 default_value.map_or_else(|| opt_str!(&q.default), |v| quote! { Some(#v) });
-            let validate_on_key = opt_str!(&q.validate_on_key);
-            let validate_on_submit = opt_str!(&q.validate_on_submit);
+            let validate = opt_str!(&q.validate);
             quote! {
                 derive_wizard::interview::QuestionKind::Input(derive_wizard::interview::InputQuestion {
                     default: #default,
-                    validate_on_key: #validate_on_key,
-                    validate_on_submit: #validate_on_submit,
+                    validate: #validate,
                 })
             }
         }
         QuestionKind::Multiline(q) => {
             let default =
                 default_value.map_or_else(|| opt_str!(&q.default), |v| quote! { Some(#v) });
-            let validate_on_key = opt_str!(&q.validate_on_key);
-            let validate_on_submit = opt_str!(&q.validate_on_submit);
+            let validate = opt_str!(&q.validate);
             quote! {
                 derive_wizard::interview::QuestionKind::Multiline(derive_wizard::interview::MultilineQuestion {
                     default: #default,
-                    validate_on_key: #validate_on_key,
-                    validate_on_submit: #validate_on_submit,
+                    validate: #validate,
                 })
             }
         }
         QuestionKind::Masked(q) => {
             let mask = q.mask.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
-            let validate_on_key = opt_str!(&q.validate_on_key);
-            let validate_on_submit = opt_str!(&q.validate_on_submit);
+            let validate = opt_str!(&q.validate);
             quote! {
                 derive_wizard::interview::QuestionKind::Masked(derive_wizard::interview::MaskedQuestion {
                     mask: #mask,
-                    validate_on_key: #validate_on_key,
-                    validate_on_submit: #validate_on_submit,
+                    validate: #validate,
                 })
             }
         }
@@ -527,15 +556,13 @@ fn generate_question_kind_code_impl(
             );
             let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
-            let validate_on_key = opt_str!(&q.validate_on_key);
-            let validate_on_submit = opt_str!(&q.validate_on_submit);
+            let validate = opt_str!(&q.validate);
             quote! {
                 derive_wizard::interview::QuestionKind::Int(derive_wizard::interview::IntQuestion {
                     default: #default,
                     min: #min,
                     max: #max,
-                    validate_on_key: #validate_on_key,
-                    validate_on_submit: #validate_on_submit,
+                    validate: #validate,
                 })
             }
         }
@@ -549,15 +576,13 @@ fn generate_question_kind_code_impl(
             );
             let min = q.min.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
             let max = q.max.map_or_else(|| quote!(None), |v| quote! { Some(#v) });
-            let validate_on_key = opt_str!(&q.validate_on_key);
-            let validate_on_submit = opt_str!(&q.validate_on_submit);
+            let validate = opt_str!(&q.validate);
             quote! {
                 derive_wizard::interview::QuestionKind::Float(derive_wizard::interview::FloatQuestion {
                     default: #default,
                     min: #min,
                     max: #max,
-                    validate_on_key: #validate_on_key,
-                    validate_on_submit: #validate_on_submit,
+                    validate: #validate,
                 })
             }
         }
@@ -675,6 +700,48 @@ fn generate_answer_extraction(ty: &Type, field_name: &str) -> proc_macro2::Token
                         }
                     }
                     #type_ident::from_answers(&nested_answers)?
+                }
+            }
+        }
+    }
+}
+
+fn generate_validate_field_method(data: &syn::DataStruct) -> proc_macro2::TokenStream {
+    let Fields::Named(fields) = &data.fields else {
+        return quote! {
+            fn validate_field(_field: &str, _value: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+                Ok(())
+            }
+        };
+    };
+
+    // Collect all fields with validators
+    let mut validator_arms = Vec::new();
+
+    for field in &fields.named {
+        let field_name = field.ident.as_ref().unwrap().to_string();
+        let attrs = FieldAttrs::extract(&field.attrs, &field_name);
+
+        if let Some(ident) = attrs.validate_ident {
+            validator_arms.push(quote! {
+                #field_name => #ident(value, answers),
+            });
+        }
+    }
+
+    if validator_arms.is_empty() {
+        // No validators, return a stub
+        quote! {
+            fn validate_field(_field: &str, _value: &str, _answers: &derive_wizard::Answers) -> Result<(), String> {
+                Ok(())
+            }
+        }
+    } else {
+        quote! {
+            fn validate_field(field: &str, value: &str, answers: &derive_wizard::Answers) -> Result<(), String> {
+                match field {
+                    #(#validator_arms)*
+                    _ => Ok(()),
                 }
             }
         }

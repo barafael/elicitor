@@ -295,4 +295,79 @@ impl InterviewBackend for RequesttyBackend {
 
         Ok(answers)
     }
+
+    fn execute_with_validator(
+        &self,
+        interview: &crate::interview::Interview,
+        validator: &dyn Fn(&str, &str, &Answers) -> Result<(), String>,
+    ) -> Result<Answers, BackendError> {
+        use derive_wizard_types::default::AssumedAnswer;
+
+        // Display prelude if present
+        if let Some(prelude) = &interview.prelude {
+            println!("{}", prelude);
+            println!();
+        }
+
+        let mut answers = Answers::new();
+
+        for question in &interview.sections {
+            // Check if question has an assumption - if so, use it and skip prompting
+            if let Some(assumed) = question.assumed() {
+                let value = match assumed {
+                    AssumedAnswer::String(s) => AnswerValue::String(s.clone()),
+                    AssumedAnswer::Int(i) => AnswerValue::Int(*i),
+                    AssumedAnswer::Float(f) => AnswerValue::Float(*f),
+                    AssumedAnswer::Bool(b) => AnswerValue::Bool(*b),
+                };
+                answers.insert(question.name().to_string(), value);
+                continue;
+            }
+
+            // Execute question with validation for Input fields
+            let id = question.id().unwrap_or_else(|| question.name());
+
+            match question.kind() {
+                QuestionKind::Input(input_q) if input_q.validate.is_some() => {
+                    // Input with validation
+                    let mut q = requestty::Question::input(id).message(question.prompt());
+
+                    if let Some(default) = &input_q.default {
+                        q = q.default(default.clone());
+                    }
+
+                    // Add validation - requestty can validate on both key and submit
+                    let answers_clone = answers.clone();
+                    let answers_clone2 = answers.clone();
+                    q = q
+                        .validate(move |value: &str, _prev_answers| -> Result<(), String> {
+                            validator(id, value, &answers_clone)
+                        })
+                        .validate_on_key(move |value: &str, _prev_answers| {
+                            validator(id, value, &answers_clone2).is_ok()
+                        });
+
+                    let answer = requestty::prompt_one(q.build()).map_err(|e| {
+                        BackendError::ExecutionError(format!("Failed to prompt: {e}"))
+                    })?;
+
+                    if let requestty::Answer::String(s) = answer {
+                        answers.insert(id.to_string(), AnswerValue::String(s));
+                    }
+                }
+                _ => {
+                    // Use regular execution for all other question types
+                    self.execute_question(question, &mut answers)?;
+                }
+            }
+        }
+
+        // Display epilogue if present
+        if let Some(epilogue) = &interview.epilogue {
+            println!();
+            println!("{}", epilogue);
+        }
+
+        Ok(answers)
+    }
 }

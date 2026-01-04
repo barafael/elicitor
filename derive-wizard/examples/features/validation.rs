@@ -1,8 +1,8 @@
-//! To validate a value during input, either
-//! * specify a 'validate' attribute (like in the 'address' member), or
-//! * specify one of or both of:
-//!   - 'validate_on_key' (validate on each input for user feedback), and/or
-//!   - 'validate_on_submit' (validate on the value submission, possibly displaying an error message)
+//! To validate a value during input, specify a 'validate' attribute.
+//! The validation function should have the signature:
+//! fn(&str, &Answers) -> Result<(), String>
+//!
+//! Backends will decide when to show validation errors (e.g., on submit, on each keystroke, etc.)
 
 use derive_wizard::Wizard;
 
@@ -14,11 +14,11 @@ struct ServerConfig {
     address: String,
 
     #[prompt("Enter admin username:")]
-    #[validate_on_key("validate_username")]
+    #[validate("validate_username")]
     username: String,
 
     #[prompt("Enter admin email:")]
-    #[validate_on_submit("validate_email")]
+    #[validate("validate_email")]
     email: String,
 }
 

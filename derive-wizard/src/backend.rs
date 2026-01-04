@@ -33,6 +33,18 @@ pub enum BackendError {
 pub trait InterviewBackend {
     /// Execute an interview and return the collected answers
     fn execute(&self, interview: &Interview) -> Result<Answers, BackendError>;
+
+    /// Execute an interview with validation support
+    /// The validator function takes (field_name, value, answers) and returns validation result
+    fn execute_with_validator(
+        &self,
+        interview: &Interview,
+        validator: &dyn Fn(&str, &str, &Answers) -> Result<(), String>,
+    ) -> Result<Answers, BackendError> {
+        // Default implementation: just execute without validation
+        let _ = validator;
+        self.execute(interview)
+    }
 }
 
 /// Test backend that returns predefined answers

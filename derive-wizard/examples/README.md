@@ -13,7 +13,7 @@ Fundamental examples showing core functionality:
 
 ### 📁 features/
 Examples demonstrating specific features:
-- **validation.rs** - Input validation with `#[validate]`, `#[validate_on_key]`, and `#[validate_on_submit]`
+- **validation.rs** - Input validation with `#[validate]`
 - **password_masking.rs** - Password masking with `#[mask]` attribute
 - **editor.rs** - Multi-line text input with `#[multiline]` attribute
 - **suggestions.rs** - Pre-filling values with suggestions using `.with_suggestions()`
@@ -128,10 +128,7 @@ let config = MyStruct::wizard_builder()
 
 ### Validation
 
-Three types of validation:
-- `#[validate("fn_name")]` - General validation
-- `#[validate_on_key("fn_name")]` - Real-time validation as user types
-- `#[validate_on_submit("fn_name")]` - Validate only on submission
+Use the `#[validate("fn_name")]` attribute to validate user input.
 
 Validation functions have signature:
 ```rust

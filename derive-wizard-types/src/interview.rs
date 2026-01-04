@@ -121,11 +121,8 @@ pub struct InputQuestion {
     /// Optional default value.
     pub default: Option<String>,
 
-    /// Validation function to call on each keystroke.
-    pub validate_on_key: Option<String>,
-
-    /// Validation function to call on submission.
-    pub validate_on_submit: Option<String>,
+    /// Validation function name.
+    pub validate: Option<String>,
 }
 
 /// Configuration for a multi-line text editor question.
@@ -134,11 +131,8 @@ pub struct MultilineQuestion {
     /// Optional default value.
     pub default: Option<String>,
 
-    /// Validation function to call on each keystroke.
-    pub validate_on_key: Option<String>,
-
-    /// Validation function to call on submission.
-    pub validate_on_submit: Option<String>,
+    /// Validation function name.
+    pub validate: Option<String>,
 }
 
 /// Configuration for a password/masked input question.
@@ -147,11 +141,8 @@ pub struct MaskedQuestion {
     /// The masking character (default: '*').
     pub mask: Option<char>,
 
-    /// Validation function to call on each keystroke.
-    pub validate_on_key: Option<String>,
-
-    /// Validation function to call on submission.
-    pub validate_on_submit: Option<String>,
+    /// Validation function name.
+    pub validate: Option<String>,
 }
 
 /// Configuration for an integer input question.
@@ -166,11 +157,8 @@ pub struct IntQuestion {
     /// Optional maximum value
     pub max: Option<i64>,
 
-    /// Validation function to call on each keystroke.
-    pub validate_on_key: Option<String>,
-
-    /// Validation function to call on submission.
-    pub validate_on_submit: Option<String>,
+    /// Validation function name.
+    pub validate: Option<String>,
 }
 
 /// Configuration for a floating-point input question.
@@ -185,11 +173,8 @@ pub struct FloatQuestion {
     /// Optional maximum value
     pub max: Option<f64>,
 
-    /// Validation function to call on each keystroke.
-    pub validate_on_key: Option<String>,
-
-    /// Validation function to call on submission.
-    pub validate_on_submit: Option<String>,
+    /// Validation function name.
+    pub validate: Option<String>,
 }
 
 /// Configuration for a yes/no confirmation question.

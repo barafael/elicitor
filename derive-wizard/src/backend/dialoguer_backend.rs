@@ -287,4 +287,72 @@ impl InterviewBackend for DialoguerBackend {
 
         Ok(answers)
     }
+
+    fn execute_with_validator(
+        &self,
+        interview: &Interview,
+        validator: &dyn Fn(&str, &str, &Answers) -> Result<(), String>,
+    ) -> Result<Answers, BackendError> {
+        use derive_wizard_types::default::AssumedAnswer;
+
+        // Display prelude if present
+        if let Some(prelude) = &interview.prelude {
+            println!("{}", prelude);
+            println!();
+        }
+
+        let mut answers = Answers::new();
+
+        for question in &interview.sections {
+            // Check if question has an assumption - if so, use it and skip prompting
+            if let Some(assumed) = question.assumed() {
+                let value = match assumed {
+                    AssumedAnswer::String(s) => AnswerValue::String(s.clone()),
+                    AssumedAnswer::Int(i) => AnswerValue::Int(*i),
+                    AssumedAnswer::Float(f) => AnswerValue::Float(*f),
+                    AssumedAnswer::Bool(b) => AnswerValue::Bool(*b),
+                };
+                answers.insert(question.name().to_string(), value);
+                continue;
+            }
+
+            // Execute question with validation for Input fields
+            let id = question.id().unwrap_or(question.name());
+
+            match question.kind() {
+                QuestionKind::Input(input_q) if input_q.validate.is_some() => {
+                    // Input with validation
+                    let mut input = dialoguer::Input::<String>::new()
+                        .with_prompt(Self::strip_prompt_colon(question.prompt()));
+
+                    if let Some(ref default) = input_q.default {
+                        input = input.default(default.to_string());
+                    }
+
+                    // Add validation - dialoguer validates on submit
+                    input = input.validate_with(|value: &String| -> Result<(), String> {
+                        validator(id, value, &answers)
+                    });
+
+                    let answer = input.interact_text().map_err(|e| {
+                        BackendError::ExecutionError(format!("Failed to prompt: {}", e))
+                    })?;
+
+                    answers.insert(id.to_string(), AnswerValue::String(answer));
+                }
+                _ => {
+                    // Use regular execution for all other question types
+                    self.execute_question(question, &mut answers)?;
+                }
+            }
+        }
+
+        // Display epilogue if present
+        if let Some(epilogue) = &interview.epilogue {
+            println!();
+            println!("{}", epilogue);
+        }
+
+        Ok(answers)
+    }
 }

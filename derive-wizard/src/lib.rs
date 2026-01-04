@@ -32,6 +32,10 @@ pub trait Wizard: Sized {
     /// Build this type from collected answers
     fn from_answers(answers: &Answers) -> Result<Self, BackendError>;
 
+    /// Validate a field value
+    /// This is called by backends during execution to validate user input
+    fn validate_field(field: &str, value: &str, answers: &Answers) -> Result<(), String>;
+
     /// Create a builder for this wizard
     fn wizard_builder() -> WizardBuilder<Self> {
         WizardBuilder::new()
@@ -190,7 +194,7 @@ impl<T: Wizard> WizardBuilder<T> {
         }
 
         let answers = backend
-            .execute(&interview)
+            .execute_with_validator(&interview, &T::validate_field)
             .expect("Failed to execute interview");
         T::from_answers(&answers).expect("Failed to build from answers")
     }
@@ -222,7 +226,7 @@ impl<T: Wizard> WizardBuilder<T> {
         }
 
         let answers = backend
-            .execute(&interview)
+            .execute_with_validator(&interview, &T::validate_field)
             .expect("Failed to execute interview");
         T::from_answers(&answers).expect("Failed to build from answers")
     }
