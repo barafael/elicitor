@@ -32,6 +32,7 @@ pub enum Role {
     Other(#[prompt("Description:")] String),
 }
 
+#[allow(dead_code)] // Fields are used for typst form generation, not runtime
 #[derive(Debug, Wizard)]
 #[prelude("Please complete this job application form.")]
 struct JobApplication {
