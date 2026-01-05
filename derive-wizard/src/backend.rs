@@ -2,6 +2,12 @@ use std::slice;
 
 use crate::{AnswerError, AnswerValue, Answers, interview::Interview};
 
+/// Type alias for validator functions used by backends.
+///
+/// Validators receive the field name, the input value, and all answers collected so far.
+/// They return `Ok(())` if validation passes, or `Err(message)` with an error message.
+pub type ValidatorFn<'a> = &'a (dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync);
+
 #[cfg(feature = "requestty-backend")]
 pub mod requestty_backend;
 
@@ -42,7 +48,7 @@ pub trait InterviewBackend {
     fn execute_with_validator(
         &self,
         interview: &Interview,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: ValidatorFn<'_>,
     ) -> Result<Answers, BackendError> {
         // Default implementation: just execute without validation
         let _ = validator;

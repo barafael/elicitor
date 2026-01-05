@@ -1,5 +1,5 @@
 #[cfg(feature = "dialoguer-backend")]
-use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend};
+use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend, ValidatorFn};
 use crate::interview::{Interview, Question, QuestionKind};
 
 /// dialoguer-based interview backend
@@ -310,7 +310,7 @@ impl InterviewBackend for DialoguerBackend {
     fn execute_with_validator(
         &self,
         interview: &Interview,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: ValidatorFn<'_>,
     ) -> Result<Answers, BackendError> {
         // Display prelude if present
         if let Some(prelude) = &interview.prelude {

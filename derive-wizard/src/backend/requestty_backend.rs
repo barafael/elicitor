@@ -1,4 +1,4 @@
-use crate::backend::{BackendError, InterviewBackend};
+use crate::backend::{BackendError, InterviewBackend, ValidatorFn};
 use crate::interview::{Question, QuestionKind};
 use crate::{AnswerValue, Answers};
 
@@ -14,7 +14,7 @@ impl RequesttyBackend {
         &self,
         question: &Question,
         answers: &mut Answers,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: ValidatorFn<'_>,
     ) -> Result<(), BackendError> {
         let id = question.id().unwrap_or_else(|| question.name());
 
@@ -503,7 +503,7 @@ impl InterviewBackend for RequesttyBackend {
     fn execute_with_validator(
         &self,
         interview: &crate::interview::Interview,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: ValidatorFn<'_>,
     ) -> Result<Answers, BackendError> {
         // Display prelude if present
         if let Some(prelude) = &interview.prelude {

@@ -4,7 +4,7 @@ Generate interactive CLI wizards or UIs by annotating Rust types. It's like magi
 
 ## Quick Start
 
-```rust
+```rust,ignore
 use derive_wizard::Wizard;
 
 #[derive(Debug, Wizard)]
@@ -56,7 +56,7 @@ derive-wizard = { version = "0.5", features = ["dialoguer-backend"] }
 
 Cross-platform terminal prompts with rich formatting.
 
-```rust
+```rust,ignore
 let config = ServerConfig::wizard_builder().build()?;
 ```
 
@@ -64,7 +64,7 @@ let config = ServerConfig::wizard_builder().build()?;
 
 Simple, lightweight terminal dialogs.
 
-```rust
+```rust,ignore
 use derive_wizard::DialoguerBackend;
 
 let config = ServerConfig::wizard_builder()
@@ -76,7 +76,7 @@ let config = ServerConfig::wizard_builder()
 
 Full TUI with keyboard navigation, progress bar, and styling.
 
-```rust
+```rust,ignore
 use derive_wizard::RatatuiBackend;
 
 let config = ServerConfig::wizard_builder()
@@ -88,7 +88,7 @@ let config = ServerConfig::wizard_builder()
 
 Desktop GUI using immediate-mode rendering.
 
-```rust
+```rust,ignore
 use derive_wizard::EguiBackend;
 
 let config = ServerConfig::wizard_builder()
@@ -100,7 +100,7 @@ let config = ServerConfig::wizard_builder()
 
 Generate PDF forms from your struct definitions. Not technically a backend, but hey. It's pretty fun.
 
-```rust
+```rust,ignore
 let form_markup = ServerConfig::to_typst_form(Some("Configuration Form"));
 std::fs::write("form.typ", form_markup)?;
 ```
@@ -135,7 +135,7 @@ std::fs::write("form.typ", form_markup)?;
 
 ### Password Input
 
-```rust
+```rust,ignore
 #[derive(Debug, Wizard)]
 struct LoginForm {
     #[prompt("Username:")]
@@ -149,7 +149,7 @@ struct LoginForm {
 
 ### Multiline Text
 
-```rust
+```rust,ignore
 #[derive(Debug, Wizard)]
 struct Article {
     #[prompt("Title:")]
@@ -163,7 +163,7 @@ struct Article {
 
 ### Validation
 
-```rust
+```rust,ignore
 use derive_wizard::{Wizard, Answers};
 
 #[derive(Debug, Wizard)]
@@ -184,7 +184,7 @@ fn validate_email(input: &str, _answers: &Answers) -> Result<(), String> {
 
 ### Enum Selection
 
-```rust
+```rust,ignore
 #[derive(Debug, Wizard)]
 enum Transport {
     Car,
@@ -204,7 +204,7 @@ struct Trip {
 
 ### Nested Structs
 
-```rust
+```rust,ignore
 #[derive(Debug, Wizard)]
 struct Address {
     #[prompt("Street:")]
@@ -230,7 +230,7 @@ struct UserProfile {
 
 Pre-fill fields with values users can modify:
 
-```rust
+```rust,ignore
 // From an existing instance
 let updated = ServerConfig::wizard_builder()
     .with_suggestions(existing_config)
@@ -247,7 +247,7 @@ let config = ServerConfig::wizard_builder()
 
 Fix values without asking:
 
-```rust
+```rust,ignore
 let config = ServerConfig::wizard_builder()
     .assume_field("use_ssl", true)
     .assume_field("port", 443)
@@ -258,7 +258,7 @@ let config = ServerConfig::wizard_builder()
 
 Use the `field!` macro for type-safe nested field paths:
 
-```rust
+```rust,ignore
 use derive_wizard::field;
 
 let profile = UserProfile::wizard_builder()

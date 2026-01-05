@@ -1,5 +1,7 @@
 #[cfg(feature = "egui-backend")]
-use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend};
+use crate::backend::{
+    AnswerValue, Answers, BackendError, InterviewBackend, ValidatorFn as BackendValidatorFn,
+};
 use crate::interview::{Interview, Question, QuestionKind};
 use itertools::Itertools;
 use std::sync::Arc;
@@ -62,7 +64,7 @@ impl InterviewBackend for EguiBackend {
     fn execute_with_validator(
         &self,
         interview: &Interview,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: BackendValidatorFn<'_>,
     ) -> Result<Answers, BackendError> {
         let mut answers = Answers::new();
 
@@ -244,14 +246,13 @@ impl EguiWizardApp {
                 ui.add_space(10.0);
 
                 // Submit button at the bottom
-                if ui.button("Submit").clicked() {
-                    if let Some(answers) = self.validate_and_collect() {
-                        if let Some(tx) = self.result_sender.take() {
-                            let _ = tx.send(Ok(answers));
-                            self.completed = true;
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    }
+                if ui.button("Submit").clicked()
+                    && let Some(answers) = self.validate_and_collect()
+                    && let Some(tx) = self.result_sender.take()
+                {
+                    let _ = tx.send(Ok(answers));
+                    self.completed = true;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             });
         });
@@ -821,10 +822,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::String(value.clone()));
 
                 // Run custom validator if configured
-                if input_q.validate.is_some() {
-                    if let Err(err) = (self.validator)(id, &value, answers) {
-                        return Err((id.to_string(), err));
-                    }
+                if input_q.validate.is_some()
+                    && let Err(err) = (self.validator)(id, &value, answers)
+                {
+                    return Err((id.to_string(), err));
                 }
 
                 Ok(())
@@ -840,10 +841,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::String(value.clone()));
 
                 // Run custom validator if configured
-                if multiline_q.validate.is_some() {
-                    if let Err(err) = (self.validator)(id, &value, answers) {
-                        return Err((id.to_string(), err));
-                    }
+                if multiline_q.validate.is_some()
+                    && let Err(err) = (self.validator)(id, &value, answers)
+                {
+                    return Err((id.to_string(), err));
                 }
 
                 Ok(())
@@ -853,10 +854,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::String(buffer.clone()));
 
                 // Run custom validator if configured
-                if masked_q.validate.is_some() {
-                    if let Err(err) = (self.validator)(id, &buffer, answers) {
-                        return Err((id.to_string(), err));
-                    }
+                if masked_q.validate.is_some()
+                    && let Err(err) = (self.validator)(id, &buffer, answers)
+                {
+                    return Err((id.to_string(), err));
                 }
 
                 Ok(())
@@ -882,10 +883,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::Int(val));
 
                 // Run custom validator if configured
-                if int_q.validate.is_some() {
-                    if let Err(err) = (self.validator)(id, &val.to_string(), answers) {
-                        return Err((id.to_string(), err));
-                    }
+                if int_q.validate.is_some()
+                    && let Err(err) = (self.validator)(id, &val.to_string(), answers)
+                {
+                    return Err((id.to_string(), err));
                 }
 
                 Ok(())
@@ -911,10 +912,10 @@ impl EguiWizardApp {
                 answers.insert(id.to_string(), AnswerValue::Float(val));
 
                 // Run custom validator if configured
-                if float_q.validate.is_some() {
-                    if let Err(err) = (self.validator)(id, &val.to_string(), answers) {
-                        return Err((id.to_string(), err));
-                    }
+                if float_q.validate.is_some()
+                    && let Err(err) = (self.validator)(id, &val.to_string(), answers)
+                {
+                    return Err((id.to_string(), err));
                 }
 
                 Ok(())

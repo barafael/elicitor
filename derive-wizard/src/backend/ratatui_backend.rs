@@ -3,7 +3,7 @@
 //! Provides a rich terminal UI with panels, progress indicators,
 //! and keyboard navigation for wizard interviews.
 
-use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend};
+use crate::backend::{AnswerValue, Answers, BackendError, InterviewBackend, ValidatorFn};
 use crate::interview::{Interview, Question, QuestionKind};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
@@ -411,10 +411,7 @@ impl WizardState {
         }
     }
 
-    fn validate_and_submit(
-        &mut self,
-        validator: Option<&(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync)>,
-    ) -> bool {
+    fn validate_and_submit(&mut self, validator: Option<ValidatorFn<'_>>) -> bool {
         let Some(question) = self.current_question().cloned() else {
             return false;
         };
@@ -429,40 +426,37 @@ impl WizardState {
         match &question.kind {
             FlatQuestionKind::Input | FlatQuestionKind::Multiline | FlatQuestionKind::Masked => {
                 // Run custom validation if field has it and validator is provided
-                if question.has_validation {
-                    if let Some(validate) = validator {
-                        if let Err(err) = validate(&question.id, &value, &self.answers) {
-                            self.error_message = Some(err);
-                            return false;
-                        }
-                    }
+                if question.has_validation
+                    && let Some(validate) = validator
+                    && let Err(err) = validate(&question.id, &value, &self.answers)
+                {
+                    self.error_message = Some(err);
+                    return false;
                 }
                 self.answers
                     .insert(question.id.clone(), AnswerValue::String(value));
             }
             FlatQuestionKind::Int { min, max } => match value.parse::<i64>() {
                 Ok(n) => {
-                    if let Some(min_val) = min {
-                        if n < *min_val {
-                            self.error_message =
-                                Some(format!("Value must be at least {}", min_val));
-                            return false;
-                        }
+                    if let Some(min_val) = min
+                        && n < *min_val
+                    {
+                        self.error_message = Some(format!("Value must be at least {}", min_val));
+                        return false;
                     }
-                    if let Some(max_val) = max {
-                        if n > *max_val {
-                            self.error_message = Some(format!("Value must be at most {}", max_val));
-                            return false;
-                        }
+                    if let Some(max_val) = max
+                        && n > *max_val
+                    {
+                        self.error_message = Some(format!("Value must be at most {}", max_val));
+                        return false;
                     }
                     // Run custom validation if field has it and validator is provided
-                    if question.has_validation {
-                        if let Some(validate) = validator {
-                            if let Err(err) = validate(&question.id, &value, &self.answers) {
-                                self.error_message = Some(err);
-                                return false;
-                            }
-                        }
+                    if question.has_validation
+                        && let Some(validate) = validator
+                        && let Err(err) = validate(&question.id, &value, &self.answers)
+                    {
+                        self.error_message = Some(err);
+                        return false;
                     }
                     self.answers
                         .insert(question.id.clone(), AnswerValue::Int(n));
@@ -474,27 +468,25 @@ impl WizardState {
             },
             FlatQuestionKind::Float { min, max } => match value.parse::<f64>() {
                 Ok(n) => {
-                    if let Some(min_val) = min {
-                        if n < *min_val {
-                            self.error_message =
-                                Some(format!("Value must be at least {}", min_val));
-                            return false;
-                        }
+                    if let Some(min_val) = min
+                        && n < *min_val
+                    {
+                        self.error_message = Some(format!("Value must be at least {}", min_val));
+                        return false;
                     }
-                    if let Some(max_val) = max {
-                        if n > *max_val {
-                            self.error_message = Some(format!("Value must be at most {}", max_val));
-                            return false;
-                        }
+                    if let Some(max_val) = max
+                        && n > *max_val
+                    {
+                        self.error_message = Some(format!("Value must be at most {}", max_val));
+                        return false;
                     }
                     // Run custom validation if field has it and validator is provided
-                    if question.has_validation {
-                        if let Some(validate) = validator {
-                            if let Err(err) = validate(&question.id, &value, &self.answers) {
-                                self.error_message = Some(err);
-                                return false;
-                            }
-                        }
+                    if question.has_validation
+                        && let Some(validate) = validator
+                        && let Err(err) = validate(&question.id, &value, &self.answers)
+                    {
+                        self.error_message = Some(err);
+                        return false;
                     }
                     self.answers
                         .insert(question.id.clone(), AnswerValue::Float(n));
@@ -521,22 +513,18 @@ impl WizardState {
                 );
 
                 // For enum variants: expand the selected variant's fields
-                if let Some(alts) = alternatives {
-                    if let Some(selected_variant) = alts.get(self.selected_option) {
-                        if let QuestionKind::Alternative(_, variant_fields) =
-                            selected_variant.kind()
-                        {
-                            // Flatten the variant's fields and insert them after the current question
-                            let prefix = id_prefix.clone().unwrap_or_default();
-                            let variant_questions =
-                                Self::flatten_questions(variant_fields, &prefix);
-                            if !variant_questions.is_empty() {
-                                // Insert after current position
-                                let insert_pos = self.current_index + 1;
-                                for (i, q) in variant_questions.into_iter().enumerate() {
-                                    self.questions.insert(insert_pos + i, q);
-                                }
-                            }
+                if let Some(alts) = alternatives
+                    && let Some(selected_variant) = alts.get(self.selected_option)
+                    && let QuestionKind::Alternative(_, variant_fields) = selected_variant.kind()
+                {
+                    // Flatten the variant's fields and insert them after the current question
+                    let prefix = id_prefix.clone().unwrap_or_default();
+                    let variant_questions = Self::flatten_questions(variant_fields, &prefix);
+                    if !variant_questions.is_empty() {
+                        // Insert after current position
+                        let insert_pos = self.current_index + 1;
+                        for (i, q) in variant_questions.into_iter().enumerate() {
+                            self.questions.insert(insert_pos + i, q);
                         }
                     }
                 }
@@ -557,10 +545,7 @@ impl WizardState {
         true
     }
 
-    fn next_question(
-        &mut self,
-        validator: Option<&(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync)>,
-    ) {
+    fn next_question(&mut self, validator: Option<ValidatorFn<'_>>) {
         if self.validate_and_submit(validator) {
             self.current_index += 1;
             self.input.clear();
@@ -628,39 +613,39 @@ impl WizardState {
             self.error_message = None;
 
             // Restore previous answer as input
-            if let Some(q) = self.current_question() {
-                if let Some(prev_answer) = self.answers.get(&q.id) {
-                    match prev_answer {
-                        AnswerValue::String(s) => {
-                            self.input = s.clone();
-                            self.cursor_pos = self.input.len();
-                        }
-                        AnswerValue::Int(n) => {
-                            self.input = n.to_string();
-                            self.cursor_pos = self.input.len();
-                        }
-                        AnswerValue::Float(n) => {
-                            self.input = n.to_string();
-                            self.cursor_pos = self.input.len();
-                        }
-                        AnswerValue::Bool(b) => {
-                            self.selected_option = if *b { 0 } else { 1 };
-                        }
-                        AnswerValue::IntList(indices) => {
-                            // Restore multi-select state
-                            if let FlatQuestionKind::MultiSelect { options, .. } = &q.kind {
-                                self.multi_selected = vec![false; options.len()];
-                                for &idx in indices {
-                                    if (idx as usize) < self.multi_selected.len() {
-                                        self.multi_selected[idx as usize] = true;
-                                    }
+            if let Some(q) = self.current_question()
+                && let Some(prev_answer) = self.answers.get(&q.id)
+            {
+                match prev_answer {
+                    AnswerValue::String(s) => {
+                        self.input = s.clone();
+                        self.cursor_pos = self.input.len();
+                    }
+                    AnswerValue::Int(n) => {
+                        self.input = n.to_string();
+                        self.cursor_pos = self.input.len();
+                    }
+                    AnswerValue::Float(n) => {
+                        self.input = n.to_string();
+                        self.cursor_pos = self.input.len();
+                    }
+                    AnswerValue::Bool(b) => {
+                        self.selected_option = if *b { 0 } else { 1 };
+                    }
+                    AnswerValue::IntList(indices) => {
+                        // Restore multi-select state
+                        if let FlatQuestionKind::MultiSelect { options, .. } = &q.kind {
+                            self.multi_selected = vec![false; options.len()];
+                            for &idx in indices {
+                                if (idx as usize) < self.multi_selected.len() {
+                                    self.multi_selected[idx as usize] = true;
                                 }
                             }
                         }
-                        AnswerValue::Nested(_) => {
-                            // Nested answers are handled through flattening,
-                            // individual fields should be restored separately
-                        }
+                    }
+                    AnswerValue::Nested(_) => {
+                        // Nested answers are handled through flattening,
+                        // individual fields should be restored separately
                     }
                 }
             }
@@ -989,7 +974,7 @@ impl InterviewBackend for RatatuiBackend {
     fn execute_with_validator(
         &self,
         interview: &Interview,
-        validator: &(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync),
+        validator: ValidatorFn<'_>,
     ) -> Result<Answers, BackendError> {
         self.execute_internal(interview, Some(validator))
     }
@@ -999,7 +984,7 @@ impl RatatuiBackend {
     fn execute_internal(
         &self,
         interview: &Interview,
-        validator: Option<&(dyn Fn(&str, &str, &Answers) -> Result<(), String> + Send + Sync)>,
+        validator: Option<ValidatorFn<'_>>,
     ) -> Result<Answers, BackendError> {
         let mut terminal = self.setup_terminal()?;
         let mut state = WizardState::new(interview, self.theme.clone(), self.title.clone());
@@ -1072,10 +1057,9 @@ impl RatatuiBackend {
                                 Some(FlatQuestionKind::Confirm { .. })
                                     | Some(FlatQuestionKind::Select { .. })
                                     | Some(FlatQuestionKind::MultiSelect { .. })
-                            ) {
-                                if state.selected_option > 0 {
-                                    state.selected_option -= 1;
-                                }
+                            ) && state.selected_option > 0
+                            {
+                                state.selected_option -= 1;
                             }
                         }
                         KeyCode::Down => {
