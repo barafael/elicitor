@@ -4,8 +4,9 @@ default-members = ["derive-survey"]
 
 members = [
     "derive-survey",
+    "derive-egui-form",
     "derive-survey-macro",
-    "derive-survey-requestty",
+    "derive-requestty-wizard",
     "derive-survey-types",
     "derive-wizard",
     "example-wizard",

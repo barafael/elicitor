@@ -1,0 +1,45 @@
+[package]
+name = "derive-egui-form"
+version = "0.1.0"
+edition = "2024"
+description = "egui form backend for derive-survey (GUI fill-in form)"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+derive-survey = { path = "../derive-survey" }
+eframe = { version = "0.31", default-features = false, features = [
+    "glow",
+    "default_fonts",
+    "x11",
+    "wayland",
+] }
+egui = "0.31"
+anyhow = "1"
+thiserror = "2"
+
+[dev-dependencies]
+# Examples
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+
+[[example]]
+name = "validation"
+path = "examples/validation.rs"
+
+[[example]]
+name = "multi_select"
+path = "examples/multi_select.rs"
+
+[[example]]
+name = "nested_structs"
+path = "examples/nested_structs.rs"
+
+[[example]]
+name = "suggestions"
+path = "examples/suggestions.rs"
+
+[[example]]
+name = "magic_forest"
+path = "examples/magic_forest.rs"

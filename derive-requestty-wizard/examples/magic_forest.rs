@@ -1,5 +1,5 @@
 use derive_survey::{ResponseValue, Responses, Survey};
-use derive_survey_requestty::RequesttyBackend;
+use derive_requestty_wizard::RequesttyBackend;
 
 #[allow(dead_code)]
 #[derive(Survey, Debug)]

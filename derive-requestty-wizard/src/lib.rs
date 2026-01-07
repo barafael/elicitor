@@ -1,13 +1,16 @@
-//! Requestty backend for derive-survey.
+//! # derive-requestty-wizard
 //!
-//! This crate provides a command-line interface for collecting survey responses
-//! using the `requestty` library.
+//! Requestty wizard backend for derive-survey.
+//!
+//! This crate provides a command-line wizard interface for collecting survey responses
+//! using the `requestty` library. Questions are presented step-by-step in a classic
+//! CLI wizard style.
 //!
 //! # Example
 //!
 //! ```ignore
 //! use derive_survey::Survey;
-//! use derive_survey_requestty::RequesttyBackend;
+//! use derive_requestty_wizard::RequesttyBackend;
 //!
 //! #[derive(Survey)]
 //! struct User {

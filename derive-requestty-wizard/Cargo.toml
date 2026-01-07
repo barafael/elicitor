@@ -1,8 +1,8 @@
 [package]
-name = "derive-survey-requestty"
+name = "derive-requestty-wizard"
 version = "0.1.0"
 edition = "2024"
-description = "Requestty backend for derive-survey"
+description = "Requestty wizard backend for derive-survey (CLI step-by-step prompts)"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
