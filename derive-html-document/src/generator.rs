@@ -1,6 +1,6 @@
 //! HTML form generator implementation.
 
-use derive_survey::{Question, QuestionKind, Survey, SurveyDefinition};
+use derive_survey::{DefaultValue, Question, QuestionKind, Survey, SurveyDefinition};
 
 /// Options for HTML generation.
 #[derive(Debug, Clone, Default)]
@@ -160,36 +160,59 @@ fn generate_question(
 
     let mut html = String::new();
 
+    // Get default value info
+    let (default_value, is_assumed) = match question.default() {
+        DefaultValue::Suggested(v) => (Some(v), false),
+        DefaultValue::Assumed(v) => (Some(v), true),
+        DefaultValue::None => (None, false),
+    };
+
+    // Skip assumed fields entirely (they won't be shown in the form)
+    if is_assumed {
+        return html;
+    }
+
     match question.kind() {
         QuestionKind::Unit => {
             // Unit types don't need input fields
         }
 
         QuestionKind::Input(_) => {
+            let value_attr = default_value
+                .and_then(|v| v.as_str())
+                .map(|s| format!(" value=\"{}\"", escape_html(s)))
+                .unwrap_or_default();
+
             html.push_str(&format!("{ind}<div class=\"{prefix}-field\">\n"));
             html.push_str(&format!(
                 "{ind}  <label for=\"{field_id}\">{}</label>\n",
                 escape_html(&label)
             ));
             html.push_str(&format!(
-                "{ind}  <input type=\"text\" id=\"{field_id}\" name=\"{path}\" class=\"{prefix}-input\">\n"
+                "{ind}  <input type=\"text\" id=\"{field_id}\" name=\"{path}\" class=\"{prefix}-input\"{value_attr}>\n"
             ));
             html.push_str(&format!("{ind}</div>\n"));
         }
 
         QuestionKind::Multiline(_) => {
+            let content = default_value
+                .and_then(|v| v.as_str())
+                .map(|s| escape_html(s))
+                .unwrap_or_default();
+
             html.push_str(&format!("{ind}<div class=\"{prefix}-field\">\n"));
             html.push_str(&format!(
                 "{ind}  <label for=\"{field_id}\">{}</label>\n",
                 escape_html(&label)
             ));
             html.push_str(&format!(
-                "{ind}  <textarea id=\"{field_id}\" name=\"{path}\" rows=\"4\" class=\"{prefix}-textarea\"></textarea>\n"
+                "{ind}  <textarea id=\"{field_id}\" name=\"{path}\" rows=\"4\" class=\"{prefix}-textarea\">{content}</textarea>\n"
             ));
             html.push_str(&format!("{ind}</div>\n"));
         }
 
         QuestionKind::Masked(_) => {
+            // Don't pre-fill password fields for security
             html.push_str(&format!("{ind}<div class=\"{prefix}-field\">\n"));
             html.push_str(&format!(
                 "{ind}  <label for=\"{field_id}\">{}</label>\n",
@@ -202,6 +225,11 @@ fn generate_question(
         }
 
         QuestionKind::Int(int_q) => {
+            let value_attr = default_value
+                .and_then(|v| v.as_int())
+                .map(|i| format!(" value=\"{i}\""))
+                .unwrap_or_default();
+
             html.push_str(&format!("{ind}<div class=\"{prefix}-field\">\n"));
             html.push_str(&format!(
                 "{ind}  <label for=\"{field_id}\">{}</label>\n",
@@ -218,11 +246,16 @@ fn generate_question(
                 attrs.push_str(&format!(" max=\"{max}\""));
             }
 
-            html.push_str(&format!("{ind}  <input {attrs}>\n"));
+            html.push_str(&format!("{ind}  <input {attrs}{value_attr}>\n"));
             html.push_str(&format!("{ind}</div>\n"));
         }
 
         QuestionKind::Float(float_q) => {
+            let value_attr = default_value
+                .and_then(|v| v.as_float())
+                .map(|f| format!(" value=\"{f}\""))
+                .unwrap_or_default();
+
             html.push_str(&format!("{ind}<div class=\"{prefix}-field\">\n"));
             html.push_str(&format!(
                 "{ind}  <label for=\"{field_id}\">{}</label>\n",
@@ -239,12 +272,17 @@ fn generate_question(
                 attrs.push_str(&format!(" max=\"{max}\""));
             }
 
-            html.push_str(&format!("{ind}  <input {attrs}>\n"));
+            html.push_str(&format!("{ind}  <input {attrs}{value_attr}>\n"));
             html.push_str(&format!("{ind}</div>\n"));
         }
 
         QuestionKind::Confirm(confirm_q) => {
-            let checked = if confirm_q.default { " checked" } else { "" };
+            // Use suggested value if provided, otherwise fall back to confirm_q.default
+            let is_checked = default_value
+                .and_then(|v| v.as_bool())
+                .unwrap_or(confirm_q.default);
+            let checked = if is_checked { " checked" } else { "" };
+
             html.push_str(&format!(
                 "{ind}<div class=\"{prefix}-field {prefix}-checkbox\">\n"
             ));
@@ -259,6 +297,11 @@ fn generate_question(
         }
 
         QuestionKind::OneOf(one_of) => {
+            // Get default selected variant index
+            let default_selected = default_value
+                .and_then(|v| v.as_chosen_variant())
+                .or(one_of.default);
+
             html.push_str(&format!(
                 "{ind}<fieldset class=\"{prefix}-fieldset {prefix}-oneof\">\n"
             ));
@@ -287,9 +330,15 @@ fn generate_question(
                         .join(" ")
                 };
 
+                let checked = if default_selected == Some(idx) {
+                    " checked"
+                } else {
+                    ""
+                };
+
                 html.push_str(&format!("{ind}  <div class=\"{prefix}-radio-option\">\n"));
                 html.push_str(&format!(
-                    "{ind}    <input type=\"radio\" id=\"{variant_id}\" name=\"{path}\" value=\"{idx}\">\n"
+                    "{ind}    <input type=\"radio\" id=\"{variant_id}\" name=\"{path}\" value=\"{idx}\"{checked}>\n"
                 ));
                 html.push_str(&format!(
                     "{ind}    <label for=\"{variant_id}\">{}</label>\n",
@@ -317,6 +366,12 @@ fn generate_question(
         }
 
         QuestionKind::AnyOf(any_of) => {
+            // Get default selected variant indices
+            let default_indices: Vec<usize> = default_value
+                .and_then(|v| v.as_chosen_variants())
+                .map(|v| v.to_vec())
+                .unwrap_or_else(|| any_of.defaults.clone());
+
             html.push_str(&format!(
                 "{ind}<fieldset class=\"{prefix}-fieldset {prefix}-anyof\">\n"
             ));
@@ -344,11 +399,17 @@ fn generate_question(
                         .join(" ")
                 };
 
+                let checked = if default_indices.contains(&idx) {
+                    " checked"
+                } else {
+                    ""
+                };
+
                 html.push_str(&format!(
                     "{ind}  <div class=\"{prefix}-checkbox-option\">\n"
                 ));
                 html.push_str(&format!(
-                    "{ind}    <input type=\"checkbox\" id=\"{variant_id}\" name=\"{path}[]\" value=\"{idx}\">\n"
+                    "{ind}    <input type=\"checkbox\" id=\"{variant_id}\" name=\"{path}[]\" value=\"{idx}\"{checked}>\n"
                 ));
                 html.push_str(&format!(
                     "{ind}    <label for=\"{variant_id}\">{}</label>\n",
