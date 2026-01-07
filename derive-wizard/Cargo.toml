@@ -7,8 +7,8 @@ license = "MIT OR Apache-2.0"
 description = "Derives interactive wizard-like user input for Rust types. Backend-agnostic (supports at least requestty and egui)."
 
 [dependencies]
-derive-wizard-macro = { version = "0.5", path = "../derive-wizard-macro" }
-derive-wizard-types = { version = "0.5", path = "../derive-wizard-types" }
+derive-survey-macro = { version = "0.1", path = "../derive-survey-macro" }
+derive-survey-types = { version = "0.1", path = "../derive-survey-types" }
 requestty = { version = "0.6", optional = true }
 thiserror = "2"
 egui = { version = "0.33", optional = true }

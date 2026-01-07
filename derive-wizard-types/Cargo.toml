@@ -1,7 +1,0 @@
-[package]
-name = "derive-wizard-types"
-version = "0.5.0"
-edition = "2024"
-license = "MIT OR Apache-2.0"
-description = "Types for helping to derive interactive wizard-like user input for Rust types."
-repository = "https://github.com/barafael/derive-wizard"

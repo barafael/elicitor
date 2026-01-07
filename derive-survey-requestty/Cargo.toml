@@ -1,0 +1,19 @@
+[package]
+name = "derive-survey-requestty"
+version = "0.1.0"
+edition = "2024"
+description = "Requestty backend for derive-survey"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+derive-survey = { path = "../derive-survey" }
+requestty = "0.5"
+anyhow = "1"
+thiserror = "2"
+
+[dev-dependencies]
+# Tests require interactive input, so we mostly test compilation
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"

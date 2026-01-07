@@ -231,7 +231,7 @@ pub trait SurveyBackend {
     fn collect(
         &self,
         definition: &SurveyDefinition,
-        validate: &dyn Fn(&ResponsePath, &str, &Responses) -> Result<(), String>,
+        validate: &dyn Fn(&ResponsePath, &Responses) -> Result<(), String>,
     ) -> Result<Responses, Self::Error>;
 }
 ```
@@ -258,7 +258,7 @@ impl SurveyBackend for RequesttyWizard {
     fn collect(
         &self,
         definition: &SurveyDefinition,
-        validate: &dyn Fn(&ResponsePath, &str, &Responses) -> Result<(), String>,
+        validate: &dyn Fn(&ResponsePath, &Responses) -> Result<(), String>,
     ) -> Result<Responses, Self::Error> {
         // Sequential prompting - this backend's choice
         for question in definition.questions() {
@@ -282,7 +282,7 @@ impl SurveyBackend for EguiForm {
     fn collect(
         &self,
         definition: &SurveyDefinition,
-        validate: &dyn Fn(&ResponsePath, &str, &Responses) -> Result<(), String>,
+        validate: &dyn Fn(&ResponsePath, &Responses) -> Result<(), String>,
     ) -> Result<Responses, Self::Error> {
         // Render all fields at once - this backend's choice
         render_form(definition.questions());
@@ -378,54 +378,56 @@ derive-typst-document/
     └── pub fn to_typst<T: Survey>(...) -> String { ... }
 ```
 
-
 Other Backend and Output Crates (following the same pattern):
 
 **Wizard-style backends:**
+
 - `derive-dialoguer-wizard` → depends on derive-survey, dialoguer
 - `derive-ratatui-wizard` → depends on derive-survey, ratatui
 
 **Form-style backends:**
+
 - `derive-ratatui-form` → depends on derive-survey, ratatui
 - `derive-egui-form` → depends on derive-survey, egui
 
 **Output crates:**
+
 - `derive-html-document` → depends on derive-survey
 
 Key Dependency Rules:
 ─────────────────────
 
 1. derive-survey-types
-   * No dependencies on other derive-survey crates
-   * Pure data structures and traits
-   * Foundation layer
+   - No dependencies on other derive-survey crates
+   - Pure data structures and traits
+   - Foundation layer
 
 2. derive-survey-macro
-   * Depends on: derive-survey-types
-   * Proc-macro that generates Survey implementations
-   * Generated code uses types that will be re-exported by derive-survey
+   - Depends on: derive-survey-types
+   - Proc-macro that generates Survey implementations
+   - Generated code uses types that will be re-exported by derive-survey
 
 3. derive-survey (facade)
-   * Depends on: derive-survey-types, derive-survey-macro
-   * Re-exports everything from both
-   * Adds SurveyBuilder and TestBackend
-   * Single dependency for users
+   - Depends on: derive-survey-types, derive-survey-macro
+   - Re-exports everything from both
+   - Adds SurveyBuilder and TestBackend
+   - Single dependency for users
 
 4. Backend crates
-   * Depend on: derive-survey (gets types via re-exports)
-   * Each implements SurveyBackend trait
-   * No interdependencies between backends
-   * Users choose which to include
+   - Depend on: derive-survey (gets types via re-exports)
+   - Each implements SurveyBackend trait
+   - No interdependencies between backends
+   - Users choose which to include
 
 5. Output crates
-   * Depend on: derive-survey
-   * Transform SurveyDefinition → documents
-   * Do NOT implement SurveyBackend (not interactive)
+   - Depend on: derive-survey
+   - Transform SurveyDefinition → documents
+   - Do NOT implement SurveyBackend (not interactive)
 
 6. User applications
-   * Always depend on: derive-survey
-   * Choose backend(s): derive-{lib}-{wizard|form}
-   * Choose output format: derive-{format}-document
+   - Always depend on: derive-survey
+   - Choose backend(s): derive-{lib}-{wizard|form}
+   - Choose output format: derive-{format}-document
 
 ## Core Types
 
@@ -859,9 +861,10 @@ pub trait Survey: Sized {
     /// guaranteeing they are consistent. If all questions are answered, reconstruction succeeds.
     fn from_responses(responses: &Responses) -> Self;
 
-    /// Validates a single field's value
-    /// Called by backends during input collection
-    fn validate_field(path: &ResponsePath, value: &str, responses: &Responses) -> Result<(), String>;
+    /// Validates a field's value.
+    /// Called by backends during input collection.
+    /// The validator receives the path and queries the responses for the value.
+    fn validate_field(path: &ResponsePath, responses: &Responses) -> Result<(), String>;
 
     /// Validates the entire survey (composite validators, inter-field conditions)
     /// Returns a map of path -> error message for all validation failures
@@ -887,7 +890,7 @@ pub trait SurveyBackend {
     fn collect(
         &self,
         definition: &SurveyDefinition,
-        validate: &dyn Fn(&ResponsePath, &str, &Responses) -> Result<(), String>,
+        validate: &dyn Fn(&ResponsePath, &Responses) -> Result<(), String>,
     ) -> Result<Responses, Self::Error>;
 }
 ```
@@ -895,7 +898,8 @@ pub trait SurveyBackend {
 The backend receives:
 
 1. `SurveyDefinition` — the questions to ask
-1. A validator function — to validate each response (used internally in retry loops)
+1. A validator function — to validate each response. The validator queries `Responses` by path,
+   which allows validating composite fields (like `Vec<T>`) that don't have a single string value.
 
 The `Into<anyhow::Error>` bound is permissive — it accepts custom error types, `anyhow::Error`, `std::io::Error`, and any `thiserror` derived error.
 
@@ -919,7 +923,8 @@ struct Registration {
     age: u32,
 }
 
-fn validate_email(path: &ResponsePath, value: &str, responses: &Responses) -> Result<(), String> {
+fn validate_email(path: &ResponsePath, responses: &Responses) -> Result<(), String> {
+    let value = responses.get_string(path).unwrap_or("");
     if value.contains('@') { Ok(()) } else { Err("Invalid email".into()) }
 }
 ```
@@ -1104,12 +1109,12 @@ let config: ServerConfig = ServerConfig::builder()
 
 Suggestions are stored in each `Question`'s default field. The builder's `with_suggestions(&self)` method walks the struct and populates question defaults from field values.
 
-You can also set individual suggestions:
+You can also set individual suggestions using **generated field-specific methods**:
 
 ```rust
 let config: ServerConfig = ServerConfig::builder()
-    .suggest("host", ResponseValue::String("localhost".into()))
-    .suggest("port", ResponseValue::Int(8080))
+    .suggest_host("localhost")
+    .suggest_port(8080)
     .run(backend)
     .unwrap();
 
@@ -1124,7 +1129,7 @@ An **assumption** is a value that skips the question entirely. The user is not p
 
 ```rust
 let config: ServerConfig = ServerConfig::builder()
-    .assume("host", "localhost")  // Skip host prompt, use "localhost"
+    .assume_host("localhost")  // Skip host prompt, use "localhost"
     .run(backend)
     .unwrap();
 
@@ -1132,82 +1137,171 @@ let config: ServerConfig = ServerConfig::builder()
 //   Port: [____]
 ```
 
-The `SurveyBuilder` provides methods for both suggestions and assumptions:
+### Generated Builder Methods
+
+The `#[derive(Survey)]` macro generates a type-specific builder with field methods. For a struct like:
 
 ```rust
-impl<T: Survey> SurveyBuilder<T> {
-    /// Pre-fill suggestions from an existing instance
-    /// The macro generates this to walk the struct and extract field values
-    pub fn with_suggestions(mut self, instance: &T) -> Self {
-        self.suggestions = Some(instance.clone());
+#[derive(Survey)]
+struct UserProfile {
+    #[ask("Name:")]
+    name: String,
+
+    #[ask("Age:")]
+    age: u32,
+
+    #[ask("Address:")]
+    address: Address,
+}
+
+#[derive(Survey)]
+struct Address {
+    #[ask("Street:")]
+    street: String,
+
+    #[ask("City:")]
+    city: String,
+}
+```
+
+The macro generates:
+
+```rust
+// Generated by #[derive(Survey)]
+pub struct UserProfileBuilder {
+    suggestions: std::collections::HashMap<&'static str, ResponseValue>,
+    assumptions: std::collections::HashMap<&'static str, ResponseValue>,
+}
+
+impl UserProfileBuilder {
+    pub fn new() -> Self { /* ... */ }
+
+    // === Suggestion methods (type-safe, IDE autocomplete) ===
+
+    pub fn suggest_name(mut self, value: impl Into<String>) -> Self {
+        self.suggestions.insert("name", ResponseValue::String(value.into()));
         self
     }
 
-    /// Suggest a default value for a field (user can modify)
-    pub fn suggest(mut self, path: impl Into<ResponsePath>, value: impl Into<ResponseValue>) -> Self {
-        self.suggested.insert(path.into(), value.into());
+    pub fn suggest_age(mut self, value: u32) -> Self {
+        self.suggestions.insert("age", ResponseValue::Int(value.into()));
         self
     }
 
-    /// Suggest multiple default values
-    pub fn suggest_all(mut self, suggestions: impl IntoIterator<Item = (ResponsePath, ResponseValue)>) -> Self {
-        self.suggested.extend(suggestions);
+    // Nested fields use underscores
+    pub fn suggest_address_street(mut self, value: impl Into<String>) -> Self {
+        self.suggestions.insert("address.street", ResponseValue::String(value.into()));
         self
     }
 
-    /// Assume a value for a field, skipping its prompt
-    pub fn assume(mut self, path: impl Into<ResponsePath>, value: impl Into<ResponseValue>) -> Self {
-        self.assumptions.insert(path.into(), value.into());
+    pub fn suggest_address_city(mut self, value: impl Into<String>) -> Self {
+        self.suggestions.insert("address.city", ResponseValue::String(value.into()));
         self
     }
 
-    /// Assume multiple values
-    pub fn assume_all(mut self, assumptions: impl IntoIterator<Item = (ResponsePath, ResponseValue)>) -> Self {
-        self.assumptions.extend(assumptions);
+    // === Assumption methods ===
+
+    pub fn assume_name(mut self, value: impl Into<String>) -> Self {
+        self.assumptions.insert("name", ResponseValue::String(value.into()));
         self
+    }
+
+    pub fn assume_age(mut self, value: u32) -> Self {
+        self.assumptions.insert("age", ResponseValue::Int(value.into()));
+        self
+    }
+
+    pub fn assume_address_street(mut self, value: impl Into<String>) -> Self {
+        self.assumptions.insert("address.street", ResponseValue::String(value.into()));
+        self
+    }
+
+    pub fn assume_address_city(mut self, value: impl Into<String>) -> Self {
+        self.assumptions.insert("address.city", ResponseValue::String(value.into()));
+        self
+    }
+
+    // === Bulk methods ===
+
+    /// Pre-fill all fields from an existing instance
+    pub fn with_suggestions(mut self, instance: &UserProfile) -> Self {
+        self.suggest_name(&instance.name)
+            .suggest_age(instance.age)
+            .suggest_address_street(&instance.address.street)
+            .suggest_address_city(&instance.address.city)
+    }
+
+    /// Run the survey with the given backend
+    pub fn run<B: SurveyBackend>(self, backend: B) -> Result<UserProfile, SurveyError> {
+        // ... apply suggestions/assumptions, run backend, reconstruct
     }
 }
 ```
 
+This approach provides:
+
+1. **Type safety** — `suggest_age` takes `u32`, not a generic value
+2. **IDE autocomplete** — type `builder.suggest_` and see all available fields
+3. **Compile-time errors** — typos like `suggest_naem` won't compile
+4. **Nested field support** — `suggest_address_street` for `address.street`
+
+### Implementation Details
+
 When running the survey, the builder applies suggestions and assumptions:
 
 ```rust
-impl<T: Survey> SurveyBuilder<T> {
-    pub fn run<B: SurveyBackend>(self, backend: B) -> Result<T, SurveyError> {
-        let mut definition = T::survey();
+impl UserProfileBuilder {
+    pub fn run<B: SurveyBackend>(self, backend: B) -> Result<UserProfile, SurveyError> {
+        let mut definition = UserProfile::survey();
+
+        // Apply suggestions to question defaults
+        apply_suggestions_to_questions(&mut definition.questions, &self.suggestions);
+
+        // Apply assumptions and collect pre-filled responses
         let mut responses = Responses::new();
+        apply_assumptions_to_questions(&mut definition.questions, &self.assumptions, &mut responses);
 
-        // Apply suggestions from instance if provided
-        if let Some(instance) = &self.suggestions {
-            // Macro-generated method walks the struct and sets question.default = Suggested(value)
-            self.apply_suggestions_to_definition(&mut definition, instance);
-        }
-
-        // Apply individual suggestions
-        for question in &mut definition.questions {
-            if let Some(value) = self.suggested.get(&question.path) {
-                question.set_suggestion(value.clone());
-            }
-        }
-
-        // Apply assumptions to questions and collect assumed responses
-        for question in &mut definition.questions {
-            if let Some(value) = self.assumptions.get(&question.path) {
-                question.set_assumption(value.clone());
-                responses.insert(question.path.clone(), value.clone());
-            }
-        }
-
-        // Filter out assumed questions (where default is Assumed)
-        definition.questions.retain(|q| !matches!(q.default(), DefaultValue::Assumed(_)));
-
-        // Run the filtered survey
-        let collected = backend.collect(&definition, &T::validate_field)
+        // Run the survey (only non-assumed questions)
+        let collected = backend.collect(&definition, &UserProfile::validate_field)
             .map_err(|e| SurveyError::Backend(e.into()))?;
         responses.extend(collected);
 
-        Ok(T::from_responses(&responses))
+        Ok(UserProfile::from_responses(&responses))
     }
+}
+
+fn apply_suggestions_to_questions(
+    questions: &mut [Question],
+    suggestions: &HashMap<&'static str, ResponseValue>,
+) {
+    for question in questions {
+        if let Some(value) = suggestions.get(question.path().to_string().as_str()) {
+            question.set_suggestion(value.clone());
+        }
+        // Recurse into nested questions
+        if let QuestionKind::AllOf(nested) = question.kind_mut() {
+            apply_suggestions_to_questions(nested.questions_mut(), suggestions);
+        }
+    }
+}
+
+fn apply_assumptions_to_questions(
+    questions: &mut [Question],
+    assumptions: &HashMap<&'static str, ResponseValue>,
+    responses: &mut Responses,
+) {
+    for question in questions {
+        if let Some(value) = assumptions.get(question.path().to_string().as_str()) {
+            question.set_assumption(value.clone());
+            responses.insert(question.path().clone(), value.clone());
+        }
+        // Recurse into nested questions
+        if let QuestionKind::AllOf(nested) = question.kind_mut() {
+            apply_assumptions_to_questions(nested.questions_mut(), assumptions, responses);
+        }
+    }
+    // Remove assumed questions from the list
+    questions.retain(|q| !q.is_assumed());
 }
 ```
 
