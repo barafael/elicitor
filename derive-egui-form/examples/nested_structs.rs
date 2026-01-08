@@ -7,8 +7,8 @@
 //!
 //! Run with: cargo run -p derive-egui-form --example nested_structs
 
-use derive_survey::Survey;
 use derive_egui_form::EguiBackend;
+use derive_survey::Survey;
 
 /// Payment method selection (OneOf example).
 #[allow(dead_code)]

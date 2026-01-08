@@ -2,11 +2,12 @@
 //!
 //! Run with: cargo run -p derive-html-document --example magic_forest
 
-use derive_html_document::{to_html_with_options, HtmlOptions};
+use derive_html_document::{HtmlOptions, to_html_with_options};
 use derive_survey::Survey;
 
 /// The magic forest adventure survey.
 #[derive(Debug, Survey)]
+#[allow(unused)]
 #[prelude("🌲 Welcome to the Magic Forest! 🌲\n\nA journey begins...")]
 #[epilogue("Good luck on your adventure!")]
 struct MagicForest {
@@ -32,6 +33,7 @@ struct MagicForest {
 
 /// Character role selection.
 #[derive(Debug, Survey)]
+#[allow(unused)]
 enum Role {
     #[ask("⚔️ Streetfighter")]
     Streetfighter,
@@ -51,6 +53,7 @@ enum Role {
 
 /// Inventory items with costs.
 #[derive(Debug, Survey)]
+#[allow(unused)]
 enum Item {
     #[ask("⚔️ Sword (value: 80 gold)")]
     Sword,

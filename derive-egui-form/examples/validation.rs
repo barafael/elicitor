@@ -5,8 +5,8 @@
 //!
 //! Run with: cargo run -p derive-egui-form --example validation
 
-use derive_survey::{ResponseValue, Responses, Survey};
 use derive_egui_form::EguiBackend;
+use derive_survey::{ResponseValue, Responses, Survey};
 
 /// Server configuration with validation.
 #[derive(Debug, Survey)]

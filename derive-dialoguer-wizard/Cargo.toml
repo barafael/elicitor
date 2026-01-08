@@ -1,0 +1,23 @@
+[package]
+name = "derive-dialoguer-wizard"
+version = "0.1.0"
+edition = "2024"
+description = "Dialoguer wizard backend for derive-survey (CLI step-by-step prompts)"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+derive-survey = { path = "../derive-survey" }
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
+anyhow = "1"
+thiserror = "2"
+
+[dev-dependencies]
+anyhow = "1"
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+
+[[example]]
+name = "magic_forest"
+path = "examples/magic_forest.rs"

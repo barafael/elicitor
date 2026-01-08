@@ -2,8 +2,8 @@
 //!
 //! Run with: cargo run -p derive-requestty-wizard --example simple
 
-use derive_survey::Survey;
 use derive_requestty_wizard::RequesttyBackend;
+use derive_survey::Survey;
 
 /// A simple user profile survey.
 #[derive(Debug, Survey)]

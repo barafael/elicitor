@@ -1,10 +1,8 @@
-//! Simple example demonstrating the egui backend for derive-survey.
+//! Simple example demonstrating the dialoguer backend for derive-survey.
 //!
-//! This example shows basic field types: strings, integers, floats, and booleans.
-//!
-//! Run with: cargo run -p derive-egui-form --example simple
+//! Run with: cargo run -p derive-dialoguer-wizard --example simple
 
-use derive_egui_form::EguiBackend;
+use derive_dialoguer_wizard::DialoguerBackend;
 use derive_survey::Survey;
 
 /// A simple user profile survey.
@@ -20,12 +18,6 @@ struct UserProfile {
     #[max(150)]
     age: i64,
 
-    /// User's height in centimeters.
-    #[ask("What is your height (in cm)?")]
-    #[min(30)]
-    #[max(300)]
-    height_cm: i64,
-
     /// User's email address.
     #[ask("What is your email?")]
     email: String,
@@ -36,18 +28,15 @@ struct UserProfile {
 }
 
 fn main() -> anyhow::Result<()> {
-    println!("=== User Profile Survey - egui Demo ===\n");
+    println!("=== User Profile Survey ===\n");
 
-    let backend = EguiBackend::new()
-        .with_title("User Profile Survey")
-        .with_window_size([450.0, 400.0]);
+    let backend = DialoguerBackend::new();
 
     let profile: UserProfile = UserProfile::builder().run(backend)?;
 
     println!("\n=== Profile Created ===");
     println!("Name: {}", profile.name);
     println!("Age: {}", profile.age);
-    println!("Height: {} cm", profile.height_cm);
     println!("Email: {}", profile.email);
     println!(
         "Newsletter: {}",

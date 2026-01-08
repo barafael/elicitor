@@ -7,8 +7,8 @@
 //!
 //! Run with: cargo run -p derive-egui-form --example suggestions
 
-use derive_survey::Survey;
 use derive_egui_form::EguiBackend;
+use derive_survey::Survey;
 
 /// Application settings with suggested defaults.
 #[derive(Debug, Clone, Survey)]

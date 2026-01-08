@@ -11,8 +11,8 @@
 //!
 //! Run with: cargo run -p derive-egui-form --example magic_forest
 
-use derive_survey::{ResponseValue, Responses, Survey};
 use derive_egui_form::EguiBackend;
+use derive_survey::{ResponseValue, Responses, Survey};
 
 /// The magic forest adventure survey.
 #[allow(dead_code)]

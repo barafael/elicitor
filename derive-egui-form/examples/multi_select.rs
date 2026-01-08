@@ -4,8 +4,8 @@
 //!
 //! Run with: cargo run -p derive-egui-form --example multi_select
 
-use derive_survey::{ResponseValue, Responses, Survey};
 use derive_egui_form::EguiBackend;
+use derive_survey::{ResponseValue, Responses, Survey};
 
 /// Programming languages for the survey.
 #[derive(Debug, Survey)]

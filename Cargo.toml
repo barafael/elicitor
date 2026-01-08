@@ -4,6 +4,7 @@ default-members = ["derive-survey"]
 
 members = [
     "derive-survey",
+    "derive-dialoguer-wizard",
     "derive-egui-form",
     "derive-html-document",
     "derive-survey-macro",

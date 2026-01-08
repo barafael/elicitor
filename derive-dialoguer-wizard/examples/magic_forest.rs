@@ -1,4 +1,15 @@
-use derive_requestty_wizard::RequesttyBackend;
+//! Magic Forest example demonstrating the dialoguer backend for derive-survey.
+//!
+//! This example showcases:
+//! - Text input with validation
+//! - Password/masked input
+//! - Integer input with min/max constraints
+//! - Enum selection (OneOf)
+//! - Multi-select (AnyOf) with budget validation
+//!
+//! Run with: cargo run -p derive-dialoguer-wizard --example magic_forest
+
+use derive_dialoguer_wizard::DialoguerBackend;
 use derive_survey::{ResponseValue, Responses, Survey};
 
 #[allow(dead_code)]
@@ -56,7 +67,7 @@ enum Item {
     #[ask("Chewing Gum (value: 2 * quantity)")]
     ChewingGum {
         flavor: String,
-        #[ask("Quando?")]
+        #[ask("How many?")]
         quantity: u32,
     },
 }
@@ -105,8 +116,11 @@ fn is_within_starting_budget(value: &ResponseValue, _responses: &Responses) -> R
 }
 
 fn main() {
-    // run the survey with the requestty backend
-    let survey_result = MagicForest::builder().run(RequesttyBackend::new()).unwrap();
+    // Run the survey with the dialoguer backend
+    let survey_result = MagicForest::builder()
+        .run(DialoguerBackend::new())
+        .expect("Survey failed");
 
+    println!("\n=== Your Character ===");
     println!("{:#?}", survey_result);
 }
