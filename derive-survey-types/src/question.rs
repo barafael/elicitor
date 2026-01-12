@@ -452,20 +452,15 @@ impl ConfirmQuestion {
 }
 
 /// The type of elements in a list question.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum ListElementKind {
     /// String elements.
+    #[default]
     String,
     /// Integer elements with optional bounds.
     Int { min: Option<i64>, max: Option<i64> },
     /// Float elements with optional bounds.
     Float { min: Option<f64>, max: Option<f64> },
-}
-
-impl Default for ListElementKind {
-    fn default() -> Self {
-        Self::String
-    }
 }
 
 /// Configuration for a list input question (Vec<T>).
