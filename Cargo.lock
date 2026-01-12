@@ -676,6 +676,7 @@ dependencies = [
  "anyhow",
  "crossterm 0.29.0",
  "derive-survey",
+ "example-surveys",
  "ratatui",
  "thiserror 2.0.17",
 ]
@@ -1014,6 +1015,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad9cdb4b747e485a12abb0e6566612956c7a1bafa3bdb8d682c5b6d403589e48"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "example-surveys"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive-survey",
 ]
 
 [[package]]

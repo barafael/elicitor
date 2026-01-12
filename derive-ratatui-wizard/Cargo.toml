@@ -14,6 +14,7 @@ thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
+example-surveys = { path = "../example-surveys" }
 
 [[example]]
 name = "simple"
@@ -22,3 +23,11 @@ path = "examples/simple.rs"
 [[example]]
 name = "magic_forest"
 path = "examples/magic_forest.rs"
+
+[[example]]
+name = "sandwich"
+path = "examples/sandwich.rs"
+
+[[example]]
+name = "job_application"
+path = "examples/job_application.rs"

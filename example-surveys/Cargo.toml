@@ -1,0 +1,9 @@
+[package]
+name = "example-surveys"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+derive-survey = { path = "../derive-survey" }
+anyhow = "1"

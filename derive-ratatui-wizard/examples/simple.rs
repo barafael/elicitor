@@ -3,29 +3,7 @@
 //! Run with: cargo run -p derive-ratatui-wizard --example simple
 
 use derive_ratatui_wizard::RatatuiBackend;
-use derive_survey::Survey;
-
-/// A simple user profile survey.
-#[derive(Debug, Survey)]
-struct UserProfile {
-    /// User's full name.
-    #[ask("What is your name?")]
-    name: String,
-
-    /// User's age.
-    #[ask("How old are you?")]
-    #[min(0)]
-    #[max(150)]
-    age: i64,
-
-    /// User's email address.
-    #[ask("What is your email?")]
-    email: String,
-
-    /// Whether the user wants to receive the newsletter.
-    #[ask("Would you like to receive our newsletter?")]
-    newsletter: bool,
-}
+use example_surveys::UserProfile;
 
 fn main() -> anyhow::Result<()> {
     let backend = RatatuiBackend::new().with_title("User Profile Survey");
