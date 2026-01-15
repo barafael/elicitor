@@ -1142,6 +1142,7 @@ fn generate_validate_field_fn(input: &DeriveInput) -> syn::Result<TokenStream2> 
     //    min/max checks would incorrectly apply to other fields
 
     // Add the propagated validator (from #[validate_fields]) if present
+    // This runs for ALL fields (e.g., cross-field stat validation)
     let type_attrs = TypeAttrs::extract(&input.attrs)?;
     if let Some(validator) = &type_attrs.validate_fields {
         validators.push(quote! {
@@ -1151,18 +1152,30 @@ fn generate_validate_field_fn(input: &DeriveInput) -> syn::Result<TokenStream2> 
         });
     }
 
+    // Helper to check if a path matches a field name
+    // The path could be "field_name" or "parent.field_name" etc.
+    let path_matches_field = |field_name: &str| -> TokenStream2 {
+        quote! {
+            (path.as_str() == #field_name || path.as_str().ends_with(&format!(".{}", #field_name)))
+        }
+    };
+
     match &input.data {
         Data::Struct(data) => {
             if let Fields::Named(fields) = &data.fields {
                 for field in &fields.named {
                     let attrs = FieldAttrs::extract(&field.attrs)?;
                     let ty = &field.ty;
+                    let field_name = field.ident.as_ref().unwrap().to_string();
 
                     if let Some(validator) = &attrs.validate {
-                        // The validator is called directly with the value being validated
+                        let path_check = path_matches_field(&field_name);
+                        // Only run this validator if the path matches this field
                         validators.push(quote! {
-                            if let Err(e) = #validator(value, responses, path) {
-                                return Err(e);
+                            if #path_check {
+                                if let Err(e) = #validator(value, responses, path) {
+                                    return Err(e);
+                                }
                             }
                         });
                     }
@@ -1210,24 +1223,39 @@ fn generate_validate_field_fn(input: &DeriveInput) -> syn::Result<TokenStream2> 
                     Fields::Named(fields) => {
                         for field in &fields.named {
                             let attrs = FieldAttrs::extract(&field.attrs)?;
+                            let field_name = field.ident.as_ref().unwrap().to_string();
 
                             if let Some(validator) = &attrs.validate {
+                                let path_check = path_matches_field(&field_name);
                                 validators.push(quote! {
-                                    if let Err(e) = #validator(value, responses, path) {
-                                        return Err(e);
+                                    if #path_check {
+                                        if let Err(e) = #validator(value, responses, path) {
+                                            return Err(e);
+                                        }
                                     }
                                 });
                             }
                         }
                     }
                     Fields::Unnamed(fields) => {
-                        for field in &fields.unnamed {
+                        // For unnamed fields (tuple variants), use the variant name as identifier
+                        let variant_name = variant.ident.to_string();
+                        for (idx, field) in fields.unnamed.iter().enumerate() {
                             let attrs = FieldAttrs::extract(&field.attrs)?;
+                            // For tuple variants, the path ends with the variant name
+                            let field_name = if fields.unnamed.len() == 1 {
+                                variant_name.clone()
+                            } else {
+                                format!("{}.{}", variant_name, idx)
+                            };
 
                             if let Some(validator) = &attrs.validate {
+                                let path_check = path_matches_field(&field_name);
                                 validators.push(quote! {
-                                    if let Err(e) = #validator(value, responses, path) {
-                                        return Err(e);
+                                    if #path_check {
+                                        if let Err(e) = #validator(value, responses, path) {
+                                            return Err(e);
+                                        }
                                     }
                                 });
                             }

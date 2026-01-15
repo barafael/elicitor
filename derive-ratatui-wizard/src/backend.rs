@@ -4,7 +4,9 @@
 //! and keyboard navigation for wizard-style surveys.
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+    },
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -741,34 +743,34 @@ impl WizardState {
                 // Get the base path (strip the selected_variant suffix)
                 let base_path = parent_path(&question.path);
 
-                // Check if we previously selected a different variant
-                let old_variant_idx = if let Some(ResponseValue::ChosenVariant(idx)) = old_value {
-                    Some(idx)
-                } else {
-                    None
-                };
+                // Check if we're selecting a different variant than before
+                let old_variant_idx = self.responses.get(&question.path).and_then(|v| {
+                    if let ResponseValue::ChosenVariant(idx) = v {
+                        Some(*idx)
+                    } else {
+                        None
+                    }
+                });
+                let changing_variant =
+                    old_variant_idx.is_some() && old_variant_idx != Some(self.selected_option);
 
-                // If changing variants, remove old variant's dynamically-inserted questions
-                // and clear their responses
-                if old_variant_idx.is_some() && old_variant_idx != Some(self.selected_option) {
-                    // Remove questions that were dynamically inserted for the old variant
-                    // These are questions after current_index whose path starts with base_path
-                    let base_path_str = base_path.as_str();
-                    let current_path_str = question.path.as_str();
+                // Remove any existing dynamically-inserted questions for this enum
+                let base_path_str = base_path.as_str();
+                let current_path_str = question.path.as_str();
 
-                    // Collect paths of questions to remove and remove the questions
-                    let i = self.current_index + 1;
-                    while i < self.questions.len() {
-                        let q_path = self.questions[i].path.as_str();
-                        // Remove if path starts with base_path but is not the select question itself
-                        if q_path.starts_with(base_path_str) && q_path != current_path_str {
-                            // Also remove the response for this question
+                let i = self.current_index + 1;
+                while i < self.questions.len() {
+                    let q_path = self.questions[i].path.as_str();
+                    // Remove if path starts with base_path but is not the select question itself
+                    if q_path.starts_with(base_path_str) && q_path != current_path_str {
+                        // Only remove responses if changing to a different variant
+                        if changing_variant {
                             self.responses.remove(&self.questions[i].path);
-                            self.questions.remove(i);
-                        } else {
-                            // Stop when we hit a question outside this enum's scope
-                            break;
                         }
+                        self.questions.remove(i);
+                    } else {
+                        // Stop when we hit a question outside this enum's scope
+                        break;
                     }
                 }
 
@@ -829,7 +831,23 @@ impl WizardState {
                 }
             }
             FlatQuestionKind::MultiSelect { variants, .. } => {
-                // Collect indices of all selected options
+                // Get base path (strip selected_variants suffix)
+                let base_path = parent_path(&question.path);
+
+                // Get old selections to compare
+                let old_indices: Vec<usize> = self
+                    .responses
+                    .get(&question.path)
+                    .and_then(|v| {
+                        if let ResponseValue::ChosenVariants(indices) = v {
+                            Some(indices.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_default();
+
+                // Collect new indices of all selected options
                 let selected_indices: Vec<usize> = self
                     .multi_selected
                     .iter()
@@ -837,13 +855,32 @@ impl WizardState {
                     .filter_map(|(i, &selected)| if selected { Some(i) } else { None })
                     .collect();
 
+                // Check if selections changed
+                let selections_changed = old_indices != selected_indices;
+
+                // Remove any existing dynamically-inserted questions for this multiselect
+                let base_path_str = base_path.as_str();
+                let current_path_str = question.path.as_str();
+
+                let i = self.current_index + 1;
+                while i < self.questions.len() {
+                    let q_path = self.questions[i].path.as_str();
+                    // Remove if path starts with base_path but is not the multiselect question itself
+                    if q_path.starts_with(base_path_str) && q_path != current_path_str {
+                        // Only remove responses if selections changed
+                        if selections_changed {
+                            self.responses.remove(&self.questions[i].path);
+                        }
+                        self.questions.remove(i);
+                    } else {
+                        break;
+                    }
+                }
+
                 self.responses.insert(
                     question.path.clone(),
                     ResponseValue::ChosenVariants(selected_indices.clone()),
                 );
-
-                // Get base path (strip selected_variants suffix)
-                let base_path = parent_path(&question.path);
 
                 // For each selected variant, add follow-up questions
                 if let Some(vars) = variants {
@@ -897,14 +934,25 @@ impl WizardState {
                     );
                     self.current_index += 1;
                 } else {
-                    // Set default selection for select/confirm/multiselect questions
+                    // Set selection/input from existing response or default
                     if let Some(q) = self.current_question() {
+                        // Check for existing response first
+                        let existing_response = self.responses.get(&q.path).cloned();
+
                         match &q.kind {
                             FlatQuestionKind::Confirm { default } => {
-                                self.selected_option = if *default { 0 } else { 1 };
+                                if let Some(ResponseValue::Bool(b)) = existing_response {
+                                    self.selected_option = if b { 0 } else { 1 };
+                                } else {
+                                    self.selected_option = if *default { 0 } else { 1 };
+                                }
                             }
                             FlatQuestionKind::Select { default_idx, .. } => {
-                                self.selected_option = *default_idx;
+                                if let Some(ResponseValue::ChosenVariant(idx)) = existing_response {
+                                    self.selected_option = idx;
+                                } else {
+                                    self.selected_option = *default_idx;
+                                }
                             }
                             FlatQuestionKind::MultiSelect {
                                 options, defaults, ..
@@ -912,16 +960,47 @@ impl WizardState {
                                 let opts_len = options.len();
                                 let defs = defaults.clone();
                                 self.multi_selected = vec![false; opts_len];
-                                for idx in defs {
-                                    if idx < self.multi_selected.len() {
-                                        self.multi_selected[idx] = true;
+                                if let Some(ResponseValue::ChosenVariants(indices)) =
+                                    existing_response
+                                {
+                                    for idx in indices {
+                                        if idx < self.multi_selected.len() {
+                                            self.multi_selected[idx] = true;
+                                        }
+                                    }
+                                } else {
+                                    for idx in defs {
+                                        if idx < self.multi_selected.len() {
+                                            self.multi_selected[idx] = true;
+                                        }
                                     }
                                 }
                                 self.selected_option = 0;
                             }
                             _ => {
-                                // Pre-fill with default value if available
-                                if let Some(def) = &q.default_value {
+                                // Pre-fill with existing response or default value
+                                if let Some(response) = existing_response {
+                                    match response {
+                                        ResponseValue::String(s) => {
+                                            self.input = s;
+                                            self.cursor_pos = self.input.len();
+                                        }
+                                        ResponseValue::Int(n) => {
+                                            self.input = n.to_string();
+                                            self.cursor_pos = self.input.len();
+                                        }
+                                        ResponseValue::Float(n) => {
+                                            self.input = n.to_string();
+                                            self.cursor_pos = self.input.len();
+                                        }
+                                        _ => {
+                                            if let Some(def) = &q.default_value {
+                                                self.input = def.clone();
+                                                self.cursor_pos = self.input.len();
+                                            }
+                                        }
+                                    }
+                                } else if let Some(def) = &q.default_value {
                                     self.input = def.clone();
                                     self.cursor_pos = self.input.len();
                                 }
@@ -1304,15 +1383,15 @@ fn draw_ui(frame: &mut Frame, state: &WizardState) {
     // Help bar
     let help_text = match state.current_question().map(|q| &q.kind) {
         Some(FlatQuestionKind::Confirm { .. }) | Some(FlatQuestionKind::Select { .. }) => {
-            "↑/↓: Select  Enter: Confirm  Esc: Cancel  Backspace: Back"
+            "↑/↓: Select  Enter: Confirm  Ctrl+←: Back  Esc: Cancel"
         }
         Some(FlatQuestionKind::MultiSelect { .. }) => {
-            "↑/↓: Navigate  Space: Toggle  Enter: Confirm  Esc: Cancel  Backspace: Back"
+            "↑/↓: Navigate  Space: Toggle  Enter: Confirm  Ctrl+←: Back  Esc: Cancel"
         }
         Some(FlatQuestionKind::List { .. }) => {
-            "Enter values separated by commas  Enter: Submit  Esc: Cancel  Backspace: Back"
+            "Enter values separated by commas  Enter: Submit  Ctrl+←: Back  Esc: Cancel"
         }
-        _ => "Enter: Submit  Esc: Cancel  Backspace: Back",
+        _ => "Enter: Submit  Ctrl+←: Back  Esc: Cancel",
     };
     let help = Paragraph::new(help_text)
         .style(Style::default().fg(state.theme.border))
@@ -1502,8 +1581,45 @@ impl SurveyBackend for RatatuiBackend {
                                 state.handle_input(key.code);
                             }
                         }
-                        KeyCode::Backspace if state.input.is_empty() && state.current_index > 0 => {
-                            state.prev_question();
+                        KeyCode::Backspace => {
+                            // For text input questions, backspace deletes or goes back when empty
+                            // For Select/MultiSelect/Confirm, backspace does nothing (use Left to go back)
+                            let is_selection_question = matches!(
+                                state.current_question().map(|q| &q.kind),
+                                Some(FlatQuestionKind::Confirm { .. })
+                                    | Some(FlatQuestionKind::Select { .. })
+                                    | Some(FlatQuestionKind::MultiSelect { .. })
+                            );
+
+                            if !is_selection_question {
+                                if state.input.is_empty() && state.current_index > 0 {
+                                    // For text input, backspace goes back only when empty
+                                    state.prev_question();
+                                } else {
+                                    // Otherwise, handle as normal backspace in text
+                                    state.handle_input(key.code);
+                                }
+                            }
+                            // For selection questions, backspace does nothing
+                        }
+                        KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            // Ctrl+Left always goes back to previous question
+                            if state.current_index > 0 {
+                                state.prev_question();
+                            }
+                        }
+                        KeyCode::Left => {
+                            // Left arrow moves cursor in text input, does nothing for selection
+                            let is_selection_question = matches!(
+                                state.current_question().map(|q| &q.kind),
+                                Some(FlatQuestionKind::Confirm { .. })
+                                    | Some(FlatQuestionKind::Select { .. })
+                                    | Some(FlatQuestionKind::MultiSelect { .. })
+                            );
+
+                            if !is_selection_question {
+                                state.handle_input(key.code);
+                            }
                         }
                         _ => {
                             if !matches!(
