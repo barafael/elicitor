@@ -1347,6 +1347,9 @@ fn generate_builder(input: &DeriveInput, builder_name: &Ident) -> syn::Result<To
         &mut assume_methods,
     )?;
 
+    // Generate with_suggestions body
+    let with_suggestions_body = generate_with_suggestions_body(input);
+
     Ok(quote! {
         /// Builder for running surveys with suggestions and assumptions
         pub struct #builder_name {
@@ -1365,7 +1368,7 @@ fn generate_builder(input: &DeriveInput, builder_name: &Ident) -> syn::Result<To
 
             /// Set suggestions from an existing instance (all fields become suggested defaults)
             pub fn with_suggestions(mut self, instance: &#name) -> Self {
-                // TODO: Walk the instance and populate suggestions
+                #with_suggestions_body
                 self
             }
 
@@ -2368,5 +2371,130 @@ fn generate_suggest_assume_methods(
                 self
             }
         });
+    }
+}
+
+/// Generate the with_suggestions body for a struct
+fn generate_with_suggestions_struct(data: &syn::DataStruct) -> TokenStream2 {
+    match &data.fields {
+        Fields::Named(fields) => {
+            let insertions: Vec<_> = fields
+                .named
+                .iter()
+                .filter_map(|f| {
+                    let field_name = f.ident.as_ref()?;
+                    let field_name_str = field_name.to_string();
+                    let ty = &f.ty;
+                    let type_name = type_to_string(ty);
+
+                    // Only handle primitive types directly
+                    let insertion = match type_name.as_str() {
+                        "String" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::String(instance.#field_name.clone())
+                            );
+                        }),
+                        "bool" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Bool(instance.#field_name)
+                            );
+                        }),
+                        "i8" | "i16" | "i32" | "i64" | "isize" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Int(instance.#field_name as i64)
+                            );
+                        }),
+                        "u8" | "u16" | "u32" | "u64" | "usize" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Int(instance.#field_name as i64)
+                            );
+                        }),
+                        "f32" | "f64" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Float(instance.#field_name as f64)
+                            );
+                        }),
+                        "PathBuf" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::String(instance.#field_name.display().to_string())
+                            );
+                        }),
+                        _ => None, // Skip complex types
+                    };
+                    insertion
+                })
+                .collect();
+
+            quote! { #(#insertions)* }
+        }
+        Fields::Unnamed(fields) => {
+            let insertions: Vec<_> = fields
+                .unnamed
+                .iter()
+                .enumerate()
+                .filter_map(|(i, f)| {
+                    let idx = syn::Index::from(i);
+                    let field_name_str = i.to_string();
+                    let ty = &f.ty;
+                    let type_name = type_to_string(ty);
+
+                    let insertion = match type_name.as_str() {
+                        "String" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::String(instance.#idx.clone())
+                            );
+                        }),
+                        "bool" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Bool(instance.#idx)
+                            );
+                        }),
+                        "i8" | "i16" | "i32" | "i64" | "isize" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Int(instance.#idx as i64)
+                            );
+                        }),
+                        "u8" | "u16" | "u32" | "u64" | "usize" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Int(instance.#idx as i64)
+                            );
+                        }),
+                        "f32" | "f64" => Some(quote! {
+                            self.suggestions.insert(
+                                #field_name_str.to_string(),
+                                derive_survey::ResponseValue::Float(instance.#idx as f64)
+                            );
+                        }),
+                        _ => None,
+                    };
+                    insertion
+                })
+                .collect();
+
+            quote! { #(#insertions)* }
+        }
+        Fields::Unit => quote! {},
+    }
+}
+
+/// Generate with_suggestions body based on the input type
+fn generate_with_suggestions_body(input: &DeriveInput) -> TokenStream2 {
+    match &input.data {
+        Data::Struct(data) => generate_with_suggestions_struct(data),
+        Data::Enum(_) => {
+            // Enums are complex - skip for now
+            quote! {}
+        }
+        Data::Union(_) => quote! {},
     }
 }

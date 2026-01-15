@@ -13,6 +13,6 @@ use example_surveys::BasicFields;
 fn main() -> anyhow::Result<()> {
     let backend = RequesttyBackend::new();
     let result = BasicFields::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

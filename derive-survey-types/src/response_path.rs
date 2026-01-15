@@ -127,25 +127,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
+    fn new() {
         let path = ResponsePath::new("name");
         assert_eq!(path.as_str(), "name");
     }
 
     #[test]
-    fn test_child() {
+    fn child() {
         let path = ResponsePath::new("address").child("street");
         assert_eq!(path.as_str(), "address.street");
     }
 
     #[test]
-    fn test_child_from_empty() {
+    fn child_from_empty() {
         let path = ResponsePath::empty().child("name");
         assert_eq!(path.as_str(), "name");
     }
 
     #[test]
-    fn test_strip_prefix() {
+    fn strip_prefix() {
         let path = ResponsePath::new("address.street");
         let stripped = path.strip_prefix("address").unwrap();
         assert_eq!(stripped.as_str(), "street");
@@ -154,27 +154,27 @@ mod tests {
     }
 
     #[test]
-    fn test_strip_prefix_exact_match() {
+    fn strip_prefix_exact_match() {
         let path = ResponsePath::new("name");
         let stripped = path.strip_prefix("name").unwrap();
         assert!(stripped.is_empty());
     }
 
     #[test]
-    fn test_segments() {
+    fn segments() {
         let path = ResponsePath::new("address.location.city");
         let segments: Vec<_> = path.segments().collect();
         assert_eq!(segments, vec!["address", "location", "city"]);
     }
 
     #[test]
-    fn test_display() {
+    fn display() {
         let path = ResponsePath::new("address.street");
         assert_eq!(format!("{}", path), "address.street");
     }
 
     #[test]
-    fn test_from_str() {
+    fn from_str() {
         let path: ResponsePath = "address.street".into();
         assert_eq!(path.as_str(), "address.street");
     }

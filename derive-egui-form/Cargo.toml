@@ -20,27 +20,3 @@ thiserror = "2"
 [dev-dependencies]
 anyhow = "1"
 example-surveys = { path = "../example-surveys" }
-
-[[example]]
-name = "simple"
-path = "examples/simple.rs"
-
-[[example]]
-name = "validation"
-path = "examples/validation.rs"
-
-[[example]]
-name = "multi_select"
-path = "examples/multi_select.rs"
-
-[[example]]
-name = "nested_structs"
-path = "examples/nested_structs.rs"
-
-[[example]]
-name = "suggestions"
-path = "examples/suggestions.rs"
-
-[[example]]
-name = "magic_forest"
-path = "examples/magic_forest.rs"

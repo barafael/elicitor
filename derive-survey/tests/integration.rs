@@ -15,7 +15,7 @@ struct SimpleConfig {
 }
 
 #[test]
-fn test_simple_survey_definition() {
+fn simple_survey_definition() {
     let survey = SimpleConfig::survey();
 
     assert_eq!(survey.questions.len(), 3);
@@ -25,7 +25,7 @@ fn test_simple_survey_definition() {
 }
 
 #[test]
-fn test_simple_survey_with_test_backend() {
+fn simple_survey_with_test_backend() {
     let config: SimpleConfig = SimpleConfig::builder()
         .run(
             TestBackend::new()
@@ -41,7 +41,7 @@ fn test_simple_survey_with_test_backend() {
 }
 
 #[test]
-fn test_builder_with_suggestions() {
+fn builder_with_suggestions() {
     // Just verify the builder methods exist and compile
     let _builder = SimpleConfig::builder()
         .suggest_name("Bob")
@@ -50,7 +50,7 @@ fn test_builder_with_suggestions() {
 }
 
 #[test]
-fn test_builder_with_assumptions() {
+fn builder_with_assumptions() {
     // Just verify the builder methods exist and compile
     let _builder = SimpleConfig::builder()
         .assume_name("Charlie")
@@ -71,7 +71,7 @@ struct ServerConfig {
 }
 
 #[test]
-fn test_prelude_and_epilogue() {
+fn prelude_and_epilogue() {
     let survey = ServerConfig::survey();
 
     assert_eq!(
@@ -82,7 +82,7 @@ fn test_prelude_and_epilogue() {
 }
 
 #[test]
-fn test_min_max_bounds() {
+fn min_max_bounds() {
     use derive_survey::QuestionKind;
 
     let survey = ServerConfig::survey();
@@ -109,7 +109,7 @@ struct PasswordForm {
 }
 
 #[test]
-fn test_mask_and_multiline() {
+fn mask_and_multiline() {
     use derive_survey::QuestionKind;
 
     let survey = PasswordForm::survey();
@@ -176,7 +176,7 @@ struct OrderForm {
 }
 
 #[test]
-fn test_nested_struct_suggest_builder() {
+fn nested_struct_suggest_builder() {
     // Test that closure-based suggest methods work for nested structs
     let _builder = OrderForm::builder()
         .suggest_customer_name("John Doe")
@@ -186,7 +186,7 @@ fn test_nested_struct_suggest_builder() {
 }
 
 #[test]
-fn test_enum_suggest_builder_suggest_variant() {
+fn enum_suggest_builder_suggest_variant() {
     // Test that suggest_* methods work for enums
     let _builder = OrderForm::builder().suggest_payment(|p| p.suggest_cash());
 
@@ -196,7 +196,7 @@ fn test_enum_suggest_builder_suggest_variant() {
 }
 
 #[test]
-fn test_enum_suggest_builder_variant_fields() {
+fn enum_suggest_builder_variant_fields() {
     // Test that variant field methods work
     let _builder = OrderForm::builder().suggest_payment(|p| {
         p.suggest_credit_card()
@@ -205,7 +205,7 @@ fn test_enum_suggest_builder_variant_fields() {
 }
 
 #[test]
-fn test_enum_suggest_multiple_variants() {
+fn enum_suggest_multiple_variants() {
     // Test that we can suggest values for multiple variants
     // (only the selected one will be used, but all can have suggestions)
     let _builder = OrderForm::builder().suggest_payment(|p| {
@@ -216,19 +216,19 @@ fn test_enum_suggest_multiple_variants() {
 }
 
 #[test]
-fn test_option_suggest_some() {
+fn option_suggest_some() {
     // Test that Option fields can be suggested with some()
     let _builder = OrderForm::builder().suggest_nickname(|opt| opt.some("Johnny"));
 }
 
 #[test]
-fn test_option_suggest_none() {
+fn option_suggest_none() {
     // Test that Option fields can be suggested with none()
     let _builder = OrderForm::builder().suggest_nickname(|opt| opt.none());
 }
 
 #[test]
-fn test_assume_nested_struct() {
+fn assume_nested_struct() {
     // Test that assume works the same as suggest for nested structs
     let _builder = OrderForm::builder().assume_shipping_address(|addr| {
         addr.street("456 Oak Ave").city("Shelbyville").zip("67890")
@@ -236,7 +236,7 @@ fn test_assume_nested_struct() {
 }
 
 #[test]
-fn test_assume_enum_with_fields() {
+fn assume_enum_with_fields() {
     // Test that assume works for enums with variant fields
     let _builder = OrderForm::builder().assume_payment(|p| {
         p.suggest_bank_transfer()
@@ -245,7 +245,7 @@ fn test_assume_enum_with_fields() {
 }
 
 #[test]
-fn test_combined_suggest_and_assume() {
+fn combined_suggest_and_assume() {
     // Test combining suggest and assume in one builder
     let _builder = OrderForm::builder()
         .suggest_customer_name("John Doe")

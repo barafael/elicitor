@@ -85,6 +85,6 @@ fn main() -> anyhow::Result<()> {
         })
         .run(backend)?;
 
-    println!("{:#?}", character);
+    println!("{result:#?}");
     Ok(())
 }

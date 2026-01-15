@@ -46,6 +46,6 @@ fn main() -> anyhow::Result<()> {
         .suggest_nutrition(|n| n.calories(600).protein(30))
         .run(backend)?;
 
-    println!("{:#?}", order);
+    println!("{result:#?}");
     Ok(())
 }

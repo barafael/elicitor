@@ -1063,7 +1063,7 @@ struct Config {
 }
 
 #[test]
-fn test_config_survey() {
+fn config_survey() {
     let config: Config = Config::builder()
         .run(
             TestBackend::new()

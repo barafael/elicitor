@@ -1535,14 +1535,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_backend_creation() {
+    fn backend_creation() {
         let _backend = RatatuiBackend::new();
         let _with_title = RatatuiBackend::new().with_title("Test");
         let _with_theme = RatatuiBackend::new().with_theme(Theme::default());
     }
 
     #[test]
-    fn test_error_types() {
+    fn error_types() {
         let err = RatatuiError::Cancelled;
         assert_eq!(err.to_string(), "Survey cancelled by user");
 
@@ -1551,7 +1551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_theme_default() {
+    fn theme_default() {
         let theme = Theme::default();
         assert_eq!(theme.primary, Color::Cyan);
         assert_eq!(theme.error, Color::Red);

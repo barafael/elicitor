@@ -21,7 +21,7 @@ struct SimpleStruct {
 }
 
 #[test]
-fn test_simple_struct_survey() {
+fn simple_struct_survey() {
     let survey = SimpleStruct::survey();
 
     assert_eq!(survey.questions.len(), 3);
@@ -40,7 +40,7 @@ fn test_simple_struct_survey() {
 }
 
 #[test]
-fn test_simple_struct_from_responses() {
+fn simple_struct_from_responses() {
     let mut responses = derive_survey::Responses::new();
     responses.insert("name", "Alice");
     responses.insert("age", derive_survey::ResponseValue::Int(25));
@@ -54,7 +54,7 @@ fn test_simple_struct_from_responses() {
 }
 
 #[test]
-fn test_builder_methods_exist() {
+fn builder_methods_exist() {
     // Just verify the builder methods compile
     let _builder = SimpleStruct::builder()
         .suggest_name("Bob")
@@ -71,7 +71,7 @@ struct WithPreludeEpilogue {
 }
 
 #[test]
-fn test_prelude_epilogue() {
+fn prelude_epilogue() {
     let survey = WithPreludeEpilogue::survey();
 
     assert_eq!(survey.prelude, Some("Welcome to the survey!".to_string()));
@@ -87,7 +87,7 @@ struct WithMinMax {
 }
 
 #[test]
-fn test_min_max() {
+fn min_max() {
     let survey = WithMinMax::survey();
 
     match survey.questions[0].kind() {
@@ -111,7 +111,7 @@ struct WithMaskedAndMultiline {
 }
 
 #[test]
-fn test_masked_and_multiline() {
+fn masked_and_multiline() {
     let survey = WithMaskedAndMultiline::survey();
 
     assert!(matches!(

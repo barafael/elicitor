@@ -12,6 +12,6 @@ use example_surveys::GameSettings;
 fn main() -> anyhow::Result<()> {
     let backend = EguiBackend::new();
     let result = GameSettings::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

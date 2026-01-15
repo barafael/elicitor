@@ -54,6 +54,6 @@ fn main() -> anyhow::Result<()> {
         })
         .run(backend)?;
 
-    println!("{:#?}", app);
+    println!("{result:#?}");
     Ok(())
 }

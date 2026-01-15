@@ -258,7 +258,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_insert_and_get() {
+    fn insert_and_get() {
         let mut responses = Responses::new();
         responses.insert("name", "Alice");
         responses.insert("age", ResponseValue::Int(30));
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_prefix() {
+    fn filter_prefix() {
         let mut responses = Responses::new();
         responses.insert("address.street", "123 Main St");
         responses.insert("address.city", "Springfield");
@@ -290,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn test_type_mismatch_error() {
+    fn type_mismatch_error() {
         let mut responses = Responses::new();
         responses.insert("age", ResponseValue::Int(30));
 

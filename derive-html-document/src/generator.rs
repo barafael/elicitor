@@ -670,3 +670,32 @@ fn generate_styles(prefix: &str) -> String {
 "#
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn html_options_creation() {
+        let _options = HtmlOptions::new();
+        let _with_title = HtmlOptions::new().with_title("Test");
+        let _with_styles = HtmlOptions::new().with_styles(true);
+        let _full_doc = HtmlOptions::new().full_document(true);
+        let _with_prefix = HtmlOptions::new().with_class_prefix("custom");
+        let _default = HtmlOptions::default();
+    }
+
+    #[test]
+    fn html_options_chaining() {
+        let options = HtmlOptions::new()
+            .with_title("Test Survey")
+            .with_styles(true)
+            .full_document(true)
+            .with_class_prefix("my-form");
+
+        assert_eq!(options.title, Some("Test Survey".to_string()));
+        assert!(options.include_styles);
+        assert!(options.full_document);
+        assert_eq!(options.class_prefix, "my-form");
+    }
+}

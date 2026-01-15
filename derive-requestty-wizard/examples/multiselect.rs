@@ -12,6 +12,6 @@ use example_surveys::DeveloperProfile;
 fn main() -> anyhow::Result<()> {
     let backend = RequesttyBackend::new();
     let result = DeveloperProfile::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

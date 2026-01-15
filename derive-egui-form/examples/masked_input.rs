@@ -12,6 +12,6 @@ use example_surveys::Login;
 fn main() -> anyhow::Result<()> {
     let backend = EguiBackend::new();
     let result = Login::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

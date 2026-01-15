@@ -14,6 +14,6 @@ use example_surveys::Checkout;
 fn main() -> anyhow::Result<()> {
     let backend = RatatuiBackend::new();
     let result = Checkout::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

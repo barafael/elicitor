@@ -1400,3 +1400,25 @@ impl SurveyBackend for EguiBackend {
         Ok(state.collect_responses())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_creation() {
+        let _backend = EguiBackend::new();
+        let _with_title = EguiBackend::new().with_title("Test");
+        let _with_size = EguiBackend::new().with_window_size([800.0, 600.0]);
+        let _default = EguiBackend::default();
+    }
+
+    #[test]
+    fn error_types() {
+        let err = EguiError::Cancelled;
+        assert_eq!(err.to_string(), "Survey cancelled by user");
+
+        let err = EguiError::EguiError("test error".to_string());
+        assert_eq!(err.to_string(), "Egui error: test error");
+    }
+}

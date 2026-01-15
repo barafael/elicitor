@@ -11,6 +11,6 @@ use example_surveys::BlogPost;
 fn main() -> anyhow::Result<()> {
     let backend = EguiBackend::new();
     let result = BlogPost::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

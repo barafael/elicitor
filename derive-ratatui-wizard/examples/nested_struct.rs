@@ -12,6 +12,6 @@ use example_surveys::UserRegistration;
 fn main() -> anyhow::Result<()> {
     let backend = RatatuiBackend::new();
     let result = UserRegistration::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

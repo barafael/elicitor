@@ -12,6 +12,6 @@ use example_surveys::FitnessProfile;
 fn main() -> anyhow::Result<()> {
     let backend = RequesttyBackend::new();
     let result = FitnessProfile::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

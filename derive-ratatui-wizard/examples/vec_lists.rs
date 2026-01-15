@@ -1,11 +1,6 @@
 //! Vec/List example
 //!
-//! Demonstrates:
-//! - Vec<String> for collecting lists of strings
-//! - Vec<numeric> for collecting lists of numbers
-//! - Min/max bounds on numeric list elements
-//!
-//! Run with: cargo run --example vec_lists
+//! Run with: cargo run -p derive-ratatui-wizard --example vec_lists
 
 use derive_ratatui_wizard::RatatuiBackend;
 use example_surveys::{ShoppingList, StudentGrades};
@@ -13,12 +8,11 @@ use example_surveys::{ShoppingList, StudentGrades};
 fn main() -> anyhow::Result<()> {
     let backend = RatatuiBackend::new();
     let shopping = ShoppingList::builder().run(backend)?;
-    println!("{:#?}", shopping);
+    println!("{shopping:#?}");
 
-    println!("=== Student Grades Example ===");
     let backend = RatatuiBackend::new();
     let grades = StudentGrades::builder().run(backend)?;
-    println!("{:#?}", grades);
+    println!("{grades:#?}");
 
     Ok(())
 }

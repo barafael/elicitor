@@ -14,6 +14,6 @@ use example_surveys::Checkout;
 fn main() -> anyhow::Result<()> {
     let backend = DialoguerBackend::new();
     let result = Checkout::builder().run(backend)?;
-    println!("{:#?}", result);
+    println!("{result:#?}");
     Ok(())
 }

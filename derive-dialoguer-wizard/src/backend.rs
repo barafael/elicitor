@@ -853,13 +853,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_backend_creation() {
+    fn backend_creation() {
         let _backend = DialoguerBackend::new();
         let _plain = DialoguerBackend::plain();
     }
 
     #[test]
-    fn test_error_types() {
+    fn error_types() {
         let err = DialoguerError::Cancelled;
         assert_eq!(err.to_string(), "Survey cancelled by user");
 

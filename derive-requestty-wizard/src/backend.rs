@@ -824,12 +824,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_backend_creation() {
+    fn backend_creation() {
         let _backend = RequesttyBackend::new();
     }
 
     #[test]
-    fn test_error_types() {
+    fn error_types() {
         let err = RequesttyError::Cancelled;
         assert_eq!(err.to_string(), "Survey cancelled by user");
 
