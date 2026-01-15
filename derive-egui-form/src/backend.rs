@@ -376,6 +376,7 @@ impl FormState {
     /// This is called dynamically when AnyOf items are selected.
     fn ensure_variant_fields(&mut self, variant: &Variant, parent_path: &ResponsePath) {
         match &variant.kind {
+            QuestionKind::Unit => {}
             QuestionKind::AllOf(all_of) => {
                 for nested_q in all_of.questions() {
                     self.ensure_question_fields(nested_q, Some(parent_path));
@@ -389,6 +390,32 @@ impl FormState {
                         FieldState::Text {
                             value: input_q.default.clone().unwrap_or_default(),
                             is_password: false,
+                            is_multiline: false,
+                        },
+                    );
+                }
+            }
+            QuestionKind::Multiline(multiline_q) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    self.fields.insert(
+                        path,
+                        FieldState::Text {
+                            value: multiline_q.default.clone().unwrap_or_default(),
+                            is_password: false,
+                            is_multiline: true,
+                        },
+                    );
+                }
+            }
+            QuestionKind::Masked(_) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    self.fields.insert(
+                        path,
+                        FieldState::Text {
+                            value: String::new(),
+                            is_password: true,
                             is_multiline: false,
                         },
                     );
@@ -422,7 +449,66 @@ impl FormState {
                     );
                 }
             }
-            _ => {}
+            QuestionKind::Confirm(confirm_q) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    self.fields.insert(
+                        path,
+                        FieldState::Bool {
+                            value: confirm_q.default,
+                        },
+                    );
+                }
+            }
+            QuestionKind::List(list_q) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    self.fields.insert(
+                        path,
+                        FieldState::List {
+                            value: String::new(),
+                            element_kind: list_q.element_kind.clone(),
+                        },
+                    );
+                }
+            }
+            QuestionKind::OneOf(one_of) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    let variants: Vec<String> =
+                        one_of.variants.iter().map(|v| v.name.clone()).collect();
+                    self.fields.insert(
+                        path.clone(),
+                        FieldState::OneOf {
+                            selected: one_of.default,
+                            variants,
+                        },
+                    );
+                    // Initialize nested fields for all variants
+                    for v in &one_of.variants {
+                        self.ensure_variant_fields(v, &path);
+                    }
+                }
+            }
+            QuestionKind::AnyOf(any_of) => {
+                let path = parent_path.child(&variant.name);
+                if !self.fields.contains_key(&path) {
+                    let variants: Vec<String> =
+                        any_of.variants.iter().map(|v| v.name.clone()).collect();
+                    let mut selected = vec![false; variants.len()];
+                    for &idx in &any_of.defaults {
+                        if idx < selected.len() {
+                            selected[idx] = true;
+                        }
+                    }
+                    self.fields
+                        .insert(path.clone(), FieldState::AnyOf { selected, variants });
+                    // Initialize nested fields for all variants
+                    for v in &any_of.variants {
+                        self.ensure_variant_fields(v, &path);
+                    }
+                }
+            }
         }
     }
 
@@ -523,7 +609,41 @@ impl FormState {
                     self.ensure_question_fields(nested_q, Some(&path));
                 }
             }
-            _ => {}
+            QuestionKind::OneOf(one_of) => {
+                if !self.fields.contains_key(&path) {
+                    let variants: Vec<String> =
+                        one_of.variants.iter().map(|v| v.name.clone()).collect();
+                    self.fields.insert(
+                        path.clone(),
+                        FieldState::OneOf {
+                            selected: one_of.default,
+                            variants,
+                        },
+                    );
+                    // Initialize nested fields for all variants
+                    for v in &one_of.variants {
+                        self.ensure_variant_fields(v, &path);
+                    }
+                }
+            }
+            QuestionKind::AnyOf(any_of) => {
+                if !self.fields.contains_key(&path) {
+                    let variants: Vec<String> =
+                        any_of.variants.iter().map(|v| v.name.clone()).collect();
+                    let mut selected = vec![false; variants.len()];
+                    for &idx in &any_of.defaults {
+                        if idx < selected.len() {
+                            selected[idx] = true;
+                        }
+                    }
+                    self.fields
+                        .insert(path.clone(), FieldState::AnyOf { selected, variants });
+                    // Initialize nested fields for all variants
+                    for v in &any_of.variants {
+                        self.ensure_variant_fields(v, &path);
+                    }
+                }
+            }
         }
     }
 
@@ -1258,6 +1378,14 @@ impl SurveyApp {
                 let path = parent_path.child(&variant.name);
                 self.render_text_field(ui, &path, "", &variant.kind, state);
             }
+            QuestionKind::Multiline(_) => {
+                let path = parent_path.child(&variant.name);
+                self.render_text_field(ui, &path, "", &variant.kind, state);
+            }
+            QuestionKind::Masked(_) => {
+                let path = parent_path.child(&variant.name);
+                self.render_text_field(ui, &path, "", &variant.kind, state);
+            }
             QuestionKind::Int(int_q) => {
                 let path = parent_path.child(&variant.name);
                 self.render_int_field(ui, &path, "", int_q, state);
@@ -1266,7 +1394,22 @@ impl SurveyApp {
                 let path = parent_path.child(&variant.name);
                 self.render_float_field(ui, &path, "", float_q, state);
             }
-            _ => {}
+            QuestionKind::Confirm(_) => {
+                let path = parent_path.child(&variant.name);
+                self.render_bool_field(ui, &path, "", state);
+            }
+            QuestionKind::List(list_q) => {
+                let path = parent_path.child(&variant.name);
+                self.render_list_field(ui, &path, "", list_q, state);
+            }
+            QuestionKind::OneOf(one_of) => {
+                let path = parent_path.child(&variant.name);
+                self.render_one_of(ui, &path, "", one_of, state);
+            }
+            QuestionKind::AnyOf(any_of) => {
+                let path = parent_path.child(&variant.name);
+                self.render_any_of(ui, &path, "", any_of, state);
+            }
         }
     }
 }
