@@ -14,7 +14,3 @@ thiserror = "2"
 [dev-dependencies]
 anyhow = "1"
 example-surveys = { path = "../example-surveys" }
-
-[[example]]
-name = "simple"
-path = "examples/simple.rs"
