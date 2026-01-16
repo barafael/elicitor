@@ -1,0 +1,16 @@
+[package]
+name = "derive-ratatui-form"
+version = "0.1.0"
+edition = "2024"
+description = "Ratatui form backend for derive-survey (TUI form with all fields visible)"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+derive-survey = { path = "../derive-survey" }
+ratatui = "0.30"
+crossterm = "0.29"
+thiserror = "2"
+
+[dev-dependencies]
+anyhow = "1"
+example-surveys = { path = "../example-surveys" }

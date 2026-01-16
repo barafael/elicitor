@@ -1141,17 +1141,6 @@ fn generate_validate_field_fn(input: &DeriveInput) -> syn::Result<TokenStream2> 
     // 2. This function runs ALL validators for ALL fields, so field-specific
     //    min/max checks would incorrectly apply to other fields
 
-    // Add the propagated validator (from #[validate_fields]) if present
-    // This runs for ALL fields (e.g., cross-field stat validation)
-    let type_attrs = TypeAttrs::extract(&input.attrs)?;
-    if let Some(validator) = &type_attrs.validate_fields {
-        validators.push(quote! {
-            if let Err(e) = #validator(value, responses, path) {
-                return Err(e);
-            }
-        });
-    }
-
     // Helper to check if a path matches a field name
     // The path could be "field_name" or "parent.field_name" etc.
     let path_matches_field = |field_name: &str| -> TokenStream2 {
@@ -1159,6 +1148,52 @@ fn generate_validate_field_fn(input: &DeriveInput) -> syn::Result<TokenStream2> 
             (path.as_str() == #field_name || path.as_str().ends_with(&format!(".{}", #field_name)))
         }
     };
+
+    // Collect field names for path checking in validate_fields
+    let field_names: Vec<String> = match &input.data {
+        Data::Struct(data) => {
+            if let Fields::Named(fields) = &data.fields {
+                fields
+                    .named
+                    .iter()
+                    .filter_map(|f| f.ident.as_ref().map(|i| i.to_string()))
+                    .collect()
+            } else {
+                vec![]
+            }
+        }
+        Data::Enum(_) => vec![],
+        _ => vec![],
+    };
+
+    // Add the propagated validator (from #[validate_fields]) if present
+    // Only run for paths that match one of this struct's fields
+    let type_attrs = TypeAttrs::extract(&input.attrs)?;
+    if let Some(validator) = &type_attrs.validate_fields {
+        if !field_names.is_empty() {
+            // Generate path checks for all fields in this struct
+            let field_checks: Vec<TokenStream2> = field_names
+                .iter()
+                .map(|name| path_matches_field(name))
+                .collect();
+
+            validators.push(quote! {
+                // Only run validate_fields if the path matches one of this struct's fields
+                if #(#field_checks)||* {
+                    if let Err(e) = #validator(value, responses, path) {
+                        return Err(e);
+                    }
+                }
+            });
+        } else {
+            // Fallback for non-struct types (shouldn't normally happen)
+            validators.push(quote! {
+                if let Err(e) = #validator(value, responses, path) {
+                    return Err(e);
+                }
+            });
+        }
+    }
 
     match &input.data {
         Data::Struct(data) => {

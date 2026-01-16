@@ -681,6 +681,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-ratatui-form"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm 0.29.0",
+ "derive-survey",
+ "example-surveys",
+ "ratatui",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "derive-ratatui-wizard"
 version = "0.1.0"
 dependencies = [
