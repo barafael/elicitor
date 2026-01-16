@@ -1,11 +1,11 @@
 pub mod app_settings;
-pub mod basic_fields; // 1
-pub mod enum_oneof; // 2
+pub mod basic_fields;
+pub mod enum_oneof;
 pub mod job_application;
 pub mod masked_input;
 pub mod min_max_bounds;
 pub mod multiline_text;
-pub mod multiselect; // 3
+pub mod multiselect;
 pub mod nested_struct;
 pub mod optional_fields;
 pub mod order_form;
