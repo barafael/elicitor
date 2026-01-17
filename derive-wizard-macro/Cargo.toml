@@ -10,7 +10,7 @@ repository = "https://github.com/barafael/derive-wizard"
 proc-macro = true
 
 [dependencies]
-derive-wizard-types = { version = "0.5", path = "../derive-wizard-types" }
+derive-wizard-types = { version = "0.5.0-use-the-elicitor-crate-instead", path = "../derive-wizard-types" }
 proc-macro2 = "1"
 quote = "1"
 syn = "2"
