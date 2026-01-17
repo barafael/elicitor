@@ -1,14 +1,14 @@
 [package]
 name = "elicitor"
-version = "0.1.0"
+version = "0.6.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-description = "Derive interactive surveys for Rust types. Backend-agnostic."
-repository = "https://github.com/barafael/derive-wizard"
+description = "Derive interactive surveys for Rust types. Backend-agnostic. Backends are provided in elicitor-wizard-requestty, elicitor-wizard-ratatui, elicitor-form-egui, and many others."
+repository = "https://github.com/barafael/elicitor"
 
 [dependencies]
-elicitor-types = { version = "0.1", path = "../elicitor-types" }
-elicitor-macro = { version = "0.1", path = "../elicitor-macro" }
+elicitor-types = { version = "0.6.0", path = "../elicitor-types" }
+elicitor-macro = { version = "0.6.0", path = "../elicitor-macro" }
 thiserror = "2"
 
 [dev-dependencies]

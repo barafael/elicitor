@@ -1,12 +1,13 @@
 [package]
 name = "elicitor-wizard-ratatui"
-version = "0.1.0"
+version = "0.6.0"
 edition = "2024"
 description = "Ratatui wizard backend for elicitor (TUI step-by-step prompts)"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/barafael/elicitor"
 
 [dependencies]
-elicitor = { path = "../elicitor" }
+elicitor = { version = "0.6.0", path = "../elicitor" }
 ratatui = "0.30"
 crossterm = "0.29"
 anyhow = "1"

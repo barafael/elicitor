@@ -869,7 +869,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "elicitor"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "elicitor-macro",
@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-doc-html"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "elicitor",
  "example-surveys",
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-doc-latex"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "elicitor",
@@ -896,7 +896,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-form-egui"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "eframe",
@@ -908,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-form-ratatui"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "crossterm 0.29.0",
@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-macro"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "elicitor-types",
@@ -931,7 +931,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-types"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "thiserror 2.0.17",
@@ -939,7 +939,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-wizard-dialoguer"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "dialoguer",
@@ -950,7 +950,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-wizard-ratatui"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "crossterm 0.29.0",
@@ -962,7 +962,7 @@ dependencies = [
 
 [[package]]
 name = "elicitor-wizard-requestty"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "elicitor",
@@ -1043,7 +1043,7 @@ dependencies = [
 
 [[package]]
 name = "example-surveys"
-version = "0.1.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "elicitor",
