@@ -1,11 +1,11 @@
 //! Egui backend implementation for SurveyBackend trait.
 
+use eframe::egui;
 use elicitor::{
     AllOfQuestion, AnyOfQuestion, DefaultValue, FloatQuestion, IntQuestion, ListElementKind,
     ListQuestion, OneOfQuestion, Question, QuestionKind, ResponsePath, ResponseValue, Responses,
     SELECTED_VARIANT_KEY, SELECTED_VARIANTS_KEY, SurveyBackend, SurveyDefinition, Variant,
 };
-use eframe::egui;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;

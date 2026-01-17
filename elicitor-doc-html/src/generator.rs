@@ -1,8 +1,6 @@
 //! HTML form generator implementation.
 
-use elicitor::{
-    DefaultValue, ListElementKind, Question, QuestionKind, Survey, SurveyDefinition,
-};
+use elicitor::{DefaultValue, ListElementKind, Question, QuestionKind, Survey, SurveyDefinition};
 
 /// Options for HTML generation.
 #[derive(Debug, Clone, Default)]

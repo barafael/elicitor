@@ -1,10 +1,10 @@
 //! Dialoguer backend implementation for SurveyBackend trait.
 
+use dialoguer::{Confirm, Editor, Input, MultiSelect, Password, Select, theme::ColorfulTheme};
 use elicitor::{
     DefaultValue, ListElementKind, Question, QuestionKind, ResponsePath, ResponseValue, Responses,
     SELECTED_VARIANT_KEY, SELECTED_VARIANTS_KEY, SurveyBackend, SurveyDefinition,
 };
-use dialoguer::{Confirm, Editor, Input, MultiSelect, Password, Select, theme::ColorfulTheme};
 use thiserror::Error;
 
 /// Error type for the Dialoguer backend.

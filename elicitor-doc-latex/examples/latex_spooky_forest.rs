@@ -1,7 +1,7 @@
 //! Generate a fillable LaTeX form for the SpookyForest survey.
 
-use elicitor_doc_latex::to_latex_form;
 use elicitor::Survey;
+use elicitor_doc_latex::to_latex_form;
 use example_surveys::SpookyForest;
 use std::fs::File;
 use std::io::Write;
