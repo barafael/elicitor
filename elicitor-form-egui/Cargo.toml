@@ -1,13 +1,13 @@
 [package]
 name = "elicitor-form-egui"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 description = "egui form backend for elicitor (GUI fill-in form)"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/barafael/elicitor"
 
 [dependencies]
-elicitor = { version = "0.6.0", path = "../elicitor" }
+elicitor = { version = "0.6.1", path = "../elicitor" }
 eframe = { version = "0.31", default-features = false, features = [
     "glow",
     "default_fonts",

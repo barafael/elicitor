@@ -1,13 +1,13 @@
 [package]
 name = "elicitor-form-ratatui"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 description = "Ratatui form backend for elicitor (TUI form with all fields visible)"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/barafael/elicitor"
 
 [dependencies]
-elicitor = { version = "0.6.0", path = "../elicitor" }
+elicitor = { version = "0.6.1", path = "../elicitor" }
 ratatui = "0.30"
 crossterm = "0.29"
 thiserror = "2"
